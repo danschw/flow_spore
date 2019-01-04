@@ -194,3 +194,34 @@ getGroupParam <- function(inp.df=df2,inp.type = "SYBR1", inp.stain = 1,
     popsep = popsep
   )
 }
+
+#### K-means ####
+
+#Getting reference matrix
+ref.ds<-function(strn="Bs02018",tim="48h",stn="1",df=df3A){
+  df%>%  
+    #dplyr::filter(!stain=="unstained")%>%
+    dplyr::filter(strain==strn)%>%
+    dplyr::filter(time==tim)%>%
+    dplyr::filter(stain==stn)%>%
+    dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+    as.matrix()
+}
+
+#
+
+#prediction function from package CLUE
+predict.clusters2<-function (A, B, method = c("euclidean", "manhattan", "minkowski"),
+                             ...) {
+  method <- match.arg(method)
+  FOO <- switch(method, euclidean = function(A, b) sqrt(rowSums(sweep(A, 
+                                                                      2, b)^2)), manhattan = function(A, b) rowSums(abs(sweep(A, 
+                                                                                                                              2, b))), minkowski = {
+                                                                                                                                p <- list(...)[[1L]]
+                                                                                                                                function(A, b) (rowSums(abs(sweep(A, 2, b))^p))^(1/p)
+                                                                                                                              })
+  out <- matrix(0, NROW(A), NROW(B))
+  for (k in seq_len(NROW(B))) out[, k] <- FOO(A, B[k, ])
+  
+  max.col(-out)
+}
