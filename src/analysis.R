@@ -421,12 +421,10 @@ clplot2
 
 plot_grid(clplot1,clplot2,align = "h")
 #ggsave("fig/f3_class.pdf",width = 8, height = 4)
-#ggsave("fig/f3_class.svg",width = 8, height = 4)
 ggsave("fig/f3_class.png",width = 8, height = 4,dpi = 900)
 
 
 #Figure 3
-#splitting according to kmeans centers
 {
   df3.split<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)
   df3.list<-split(df3.split,df3$strain)
@@ -648,8 +646,15 @@ fcsset5g<-fcsset5%>%
 fcs.df1<-flowFcsToDf(fcsset5g)
 
 fcs.df1%>%
-  ggplot(aes(asinh.FL1.A,interaction(type,stain,conc)))+
-  geom_density_ridges()+ylab("")
+  select(type,stain,conc,asinh.FL1.A,asinh.FL3.A)%>%
+  gather("channel","value",4:5)%>%
+  ggplot(aes(value,interaction(stain,conc),fill=type))+
+  geom_density_ridges(alpha=0.6)+ylab("")+
+  scale_fill_discrete(name="")+
+  theme(legend.position = c(0.1, 0.95))+
+  facet_grid(.~channel)
+
+ggsave("suppl/ps2.pdf",width = 8, height = 10)
 
 fcs.df2<-fcs.df1%>%
   group_by(type,stain,conc)%>%
