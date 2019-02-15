@@ -79,11 +79,18 @@ leg.plot<-df1%>%
   ggplot(aes(asinh.FL1.A))+geom_density(aes(fill=ident),alpha=0.4)+
   ylab("")+xlab("")+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,
-                     labels=c("sample: cells","sample: spores"),
+                     labels=c("non-sporulating cells","purified spores"),
                      name="",direction = -1)+
   theme(legend.position = c(0.01,0.95))+
   theme(axis.text.x = element_blank(),axis.text.y = element_blank(),axis.ticks = element_blank())+
-  ylim(0,100)
+  ylim(0,100)+ 
+  annotate(geom="text", x=-10, y=65, parse=TRUE,label = "bold('A')~Side~Scatter~(no~stain)",hjust=0,size=4)+
+  annotate(geom="text", x=-10, y=55, parse=TRUE,label = "bold('B')~Forward~Scatter~(no~stain)",hjust=0,size=4)+
+  annotate(geom="text", x=-10, y=45, parse=TRUE,label = "bold('C')~PI~stain",hjust=0,size=4)+
+  annotate(geom="text", x=-10, y=35, parse=TRUE,label = "bold('D')~SYBR1~stain",hjust=0,size=4)+
+  annotate(geom="text", x=-10, y=25, parse=TRUE,label = "bold('E')~SYBR2~stain",hjust=0,size=4)+
+  geom_rect(aes(xmin = -10, xmax = 100, ymin = 0, ymax = 1),color = "white", size = 2, fill = "white")
+
 
 leg.plot
 }
@@ -214,7 +221,7 @@ allp.list.P<-Map(
 
 allp.list<-allp.list.P%>%do.call("rbind",.) 
 
-#finding critical value
+#critical value
 crit.val<-qnorm(0.001/2,lower.tail = TRUE)%>%
   abs()
 
@@ -258,8 +265,8 @@ ps2.2<-viability%>%
   facet_grid(time~.)+
   ylab("% CFU")+xlab("")+
   scale_color_discrete(name="")+
-  scale_shape_discrete(name="")+
-  scale_linetype_discrete(name="")
+  scale_shape_discrete(name="",labels=c("non-sporulating cells","purified spores"))+
+  scale_linetype_discrete(name="",labels=c("non-sporulating cells","purified spores"))
 
 plot_grid(ps2.1,ps2.2,nrow = 2,labels = c("A","B"))
 
@@ -381,20 +388,20 @@ pca.res$x%>%
   ggplot(aes(PC1,PC2))+
   #geom_point(aes(col=cluster,alpha=0.6))+
   geom_hex(aes(fill=..count..),bins=200)+
-  scale_color_viridis(discrete = TRUE,end=0.8,label=c("Cells","Endospores","Spores"),
+  scale_color_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),
                      name="",direction = -1)+
   scale_alpha_continuous(guide=FALSE)+
   scale_fill_viridis_c(guide=FALSE)+
   geom_density2d(aes(color=cluster),bins=3)
 
-ggsave("fig/f3_pca.png",width = 6, height = 6,dpi = 900)
+#ggsave("suppl/s_pca.png",width = 6, height = 6,dpi = 900)
 
 clplot1<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
   #geom_point(aes(col=cluster))+
   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
   xlim(c(10,15))+ylim(c(2.5,15))+
-  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Endospores","Spores"),name="",direction = -1,
+  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
                      guide = FALSE)+
   scale_alpha_continuous(guide = FALSE)+
   theme_bw()+
@@ -406,10 +413,9 @@ clplot1
 
 clplot2<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
   ggplot(aes(asinh.SSC.A,asinh.FSC.A))+
-  #geom_point(aes(col=cluster))+
-  geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount..
+  geom_hex(aes(fill=as.factor(cluster)),bins=300)+
   xlim(c(10,15))+ylim(c(9,12))+
-  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Endospores","Spores"),name="",direction = -1,
+  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
                      guide=FALSE)+
   scale_alpha_continuous(guide = FALSE)+
   theme_bw()+
@@ -473,7 +479,7 @@ ccount2<-c.count.B%>%
                     group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
   ylab("Proportion / %")+xlab("time / h")+
   scale_y_continuous(expand = c(0,0))+
-  scale_fill_viridis(labels=c("Cells","Endospores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
+  scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
                      alpha = 0.8)+
   theme_minimal()+
   theme(panel.spacing = unit(1, "lines"),legend.title=element_blank(),
@@ -617,7 +623,7 @@ lapply(1,function(x) {
     ylab("Proportion / %")+xlab("time / h")+
     scale_y_continuous(expand = c(0,0))+
     facet_grid(strain~.)+
-    scale_fill_viridis(labels=c("Cells","Endospores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
+    scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
                        guide=FALSE,alpha = 0.8)+
     theme_minimal()+
     theme(panel.spacing = unit(1, "lines"),legend.title=element_blank())+
@@ -631,6 +637,8 @@ plot_grid(ccount1,ccount2,nrow = 1,rel_widths = c(0.6,0.4),labels = c("A","B"))
 ggsave("fig/f4_applications.pdf",width = 8, height = 5)
 
 #### Supplemental: Combinations ####
+
+remove(list=ls())
 
 #GET: mka spores sepration 4 > combination stains!
 source("src/functions.R")
@@ -650,11 +658,11 @@ fcs.df1%>%
   gather("channel","value",4:5)%>%
   ggplot(aes(value,interaction(stain,conc),fill=type))+
   geom_density_ridges(alpha=0.6)+ylab("")+
-  scale_fill_discrete(name="")+
-  theme(legend.position = c(0.1, 0.95))+
+  scale_fill_discrete(name="",labels=c("non-sporulating cells","purified spores"))+
+  theme(legend.position = c(0.45, 0.97))+
   facet_grid(.~channel)
 
-ggsave("suppl/ps2.pdf",width = 8, height = 10)
+ggsave("suppl/ps2.pdf",width = 10, height = 10)
 
 fcs.df2<-fcs.df1%>%
   group_by(type,stain,conc)%>%
@@ -664,29 +672,25 @@ fcs.df2<-fcs.df1%>%
          SYBR1=c(0,0,1,0,2,1,0,0,0,1,0,2,1,0),
          SYBR2=c(0,0,0,1,0,1,2,0,0,0,1,0,1,2))
 
-fcs.df3%>%
-  ggplot(aes(as.numeric(SYBR1),as.numeric(mean.fl1)))+
-  geom_point(aes(col=PI,shape=SYBR2))+
-  geom_line(aes(col=PI),stat="summary",fun.y=mean)
-
-fcs.df3%>%
+fcs.df2%>%
   ggplot(aes(as.numeric(mean.fl1),as.numeric(mean.fl3)))+
-  geom_point(aes(col=interaction(PI),shape=SYBR2))+
+  geom_point()
+  geom_point(aes(col=interaction(PI),shape=as.factor(SYBR2)))+
   geom_line(aes(col=SYBR1),stat="summary",fun.y=mean)+
   facet_grid(PI~.)
 
-fcs.df3%>%
+fcs.df2%>%
   dplyr::filter(PI==0)%>%
   lm(as.numeric(mean.fl1)~-1+as.numeric(SYBR2)*as.numeric(SYBR1)+
        as.numeric(SYBR2),data=.)%>%
   summary()
 
-fcs.df3%>%
+fcs.df2%>%
   dplyr::filter(SYBR2==0)%>%
   lm(as.numeric(mean.fl3)~-1+as.numeric(SYBR1)*as.numeric(PI),data=.)%>%
   summary()
 
-fcs.df3%>%
+fcs.df2%>%
   dplyr::filter(SYBR1==0)%>%
   lm(as.numeric(mean.fl3)~-1+as.numeric(SYBR2)*as.numeric(PI),data=.)%>%
   summary()
