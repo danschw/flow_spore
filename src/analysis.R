@@ -520,7 +520,7 @@ df3A<-fcsset3AG%>%
   
 }
 
-#Supplemental ?
+#Supplemental 
 
 data.frame(Bs2003.reference,cluster=Bs2003.kmeans$cluster)%>%
     ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
@@ -556,7 +556,7 @@ data.frame(Bs2020.reference,cluster=Bs2020.kmeans$cluster)%>%
   
 }
 
-#Supplemental ?
+#Supplemental
 
 suppl6<-lapply(1:3,function(x) {
   cluster.pred.A%>%

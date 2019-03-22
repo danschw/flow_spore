@@ -16,6 +16,8 @@ library(mixtools)
 ###Functions###
 #~~~~~~~~~~~~~#
 
+#### GMM
+
 
   getEmMod<-function(inp.df,inp.type,inp.stain,inp.time,inp.channel,cutoff=5,lowPop=5,highPop=13){
     
@@ -92,121 +94,6 @@ library(mixtools)
       popsep = popsep
     )
   }
-  
-
-
-
-# 
-# 
-# library(Biobase) #for annotated data frames
-# library(plyr)
-# library(tidyverse)
-# library(forcats)
-# library(xtable)
-# 
-# library(xtable)
-# library(forcats)
-# 
-# library(plot3D)
-# library(ggridges)
-# library(kableExtra)
-# library(tidyverse)
-# 
-# library(ggridges)
-# library(kableExtra)
-# library(tidyverse)
-# library(flowCore)
-# library(viridis)
-# library(clue)
-# library(class)
-# library(ggforce)
-# library(scales)
-# 
-# 
-# ####Bioconductor####
-# #source("https://bioconductor.org/biocLite.R")
-# #biocLite()
-# 
-# 
-# 
-# 
-# ##### Loading FCS Files #####
-# 
-# createFlowset<-function(filepath,sample.variables=c("ident","type","stain","conc"),fact=1){
-#   #Extracting fcsset rownames from filenames
-#   fileset<-list.files(path =filepath,pattern = ".fcs") # 
-#   
-#   fcsnames<-fileset %>%
-#     as.data.frame()%>%
-#     separate(1,into = sample.variables,sep = "_")
-#   
-#   fcsnames$fact<-fact #adding additional information
-#   fcsnames<-fcsnames[,!names(fcsnames)=="trash"] #deleting trash column
-#   fcsnames$fullname<-apply(fcsnames, 1, paste, collapse="_") #add all names
-#   
-#   #Loading FCS Files
-#   fileloc<-paste0(filepath,fileset)
-#   fcsset<-read.flowSet(files=fileloc,transformation = "linearize",emptyValue = FALSE,ignore.text.offset = TRUE)
-#   
-#   sampleNames(fcsset)<-fcsnames$fullname #changing filename to something unique: fullname
-#   #creating annotated data frame to add information from filenames into phenoData slot of flowset
-#   adf<-AnnotatedDataFrame(fcsnames,
-#                           data.frame(labelDescription=colnames(fcsnames)))
-#   rownames(adf)<-sampleNames(fcsset) #changing rownames, so adf can be inserted into flowset
-#   phenoData(fcsset)<-adf
-#   
-#   #transformation
-#   fcsset<-transform(fcsset,
-#                     `asinh.FL1-A`=asinh(`FL1-A`),
-#                     `asinh.FL2-A`=asinh(`FL2-A`),
-#                     `asinh.FL3-A`=asinh(`FL3-A`),
-#                     `asinh.FL4-A`=asinh(`FL4-A`),
-#                     `asinh.FL5-A`=asinh(`FL5-A`),
-#                     `asinh.FSC-A`=asinh(`FSC-A`),
-#                     `asinh.FSC-H`=asinh(`FSC-H`),
-#                     `asinh.FSC-W`=asinh(`FSC-W`),
-#                     `asinh.SSC-A`=asinh(`SSC-A`),
-#                     `asinh.SSC-H`=asinh(`SSC-H`),
-#                     `asinh.SSC-W`=asinh(`SSC-W`)
-#   )
-#   
-#   fcsset
-# }
-# 
-# 
-# 
-# #### FCS Specific ####
-# 
-# fcstodf<-function(fcsset){
-#   i<-1
-#   fcsNames<-pData(phenoData(fcsset))#Sample names and descriptions (if available)
-#   numbc<-c(1:as.numeric(count(as.data.frame(fcsset@phenoData@data$name))))
-#   fcs.df<-NULL
-#   for (i in numbc){
-#     fcs.temp<-cbind(as.data.frame(exprs(fcsset[[i]])),File=as.factor(fcsNames$name[i]))
-#     fcs.df<-rbind(fcs.df,fcs.temp)
-#     print(paste("case number",i,"done"))
-#   }
-#   return(fcs.df)
-# }
-# 
-# samplefcstodf<-function(fcsset,nsamples=10000){
-#   i<-1
-#   set.seed(1)
-#   fcsNames<-pData(phenoData(fcsset))#Sample names and descriptions (if available)
-#   numbc<-c(1:as.numeric(count(as.data.frame(fcsset@phenoData@data$name)))) #number of samples
-#   fcs.df<-NULL
-#   for (i in numbc){
-#     fcs.temp<-cbind(as.data.frame(exprs(fcsset[[i]])),File=as.factor(fcsNames$name[i]))
-#     fcs.df<-rbind(fcs.df,fcs.temp[sample(nrow(fcs.temp),nsamples,replace = TRUE),])
-#     print(paste("case number",i,"done"))
-#   }
-#   row.names(fcs.df) <- 1:nrow(fcs.df)
-#   return(fcs.df)
-# }
-# 
-#### Gaussian Mixture Modeling ####
-
 
 #### K-means ####
 
@@ -236,8 +123,6 @@ predict.clusters2<-function (A, B, method = c("euclidean", "manhattan", "minkows
 
   max.col(-out)
 }
-
-### K-Means ###
 
 kmeans.rep <- function(df,sample="noinfo",rep=10){
   km.mods <- lapply(1:rep,function(x) kmeans(df,3))
