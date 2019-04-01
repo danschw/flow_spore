@@ -10,7 +10,9 @@ library(cowplot)
 library(ggridges)
 library(mixtools)
 
-devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")
+if(!require(dsHelper)){
+  devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")  
+}
 library(dsHelper)
 
 
@@ -18,7 +20,7 @@ library(dsHelper)
 ###Functions###
 #~~~~~~~~~~~~~#
 
-#### GMM
+#### GMM ####
 
   getEmMod<-function(inp.df,inp.type,inp.stain,inp.time,inp.channel,cutoff=5,lowPop=5,highPop=13){
     

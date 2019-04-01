@@ -99,7 +99,7 @@ plot_grid(SSC.plot,FSC.plot,PI.plot,S1.plot,S2.plot,leg.plot,ncol = 3,labels = "
 
 ggsave("fig/f1_roc.pdf",width = 9, height = 5,units = "in",dpi=300)
 
-#### Figure 2: - Measuring both together: ability to separate ####
+#### Figure 2: - Measuring cells and spores together: ability to separate ####
 
 {#loading
   rm(list=ls())
@@ -140,7 +140,7 @@ casesPre<-unique(with(df2,interaction(type,stain,time,channel,sep = "_")))%>%
   separate(col=1,into=c("type","stain","time"),sep="_")
 casesPre
 
-#selected cases
+#selected cases and set starting points for EMM depending on channel
 cases1<-data.frame(
   type=c("PI","PI","PI","SYBR1","SYBR1","SYBR1","SYBR2","SYBR2","SYBR2","unstained","unstained"),
   stain=c(1,2,4,1,2,4,1,2,4,0,0),
@@ -168,8 +168,8 @@ cutoffs.list<-sapply(models.list,function(x) getEmCutoff(x))
 #plotting
 
 ## Supplemental 3
-i=1
-plot.list<-list()
+i=1;plot.list<-list()
+sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
 
 for (i in 1:length(models.list)){
   plot.list[[i]]<-
@@ -177,16 +177,13 @@ for (i in 1:length(models.list)){
                g1l=models.list[[i]]$posterior[,1],
                g2l=models.list[[i]]$posterior[,2])%>%
     gather("group","value",2:3)%>%
-    #head%>%
     ggplot()+
     geom_histogram(aes(x=x,y=..ncount..),bins=30)+
     geom_line(aes(x,value,color=group))+
     geom_vline(aes_string(xintercept=cutoffs.list[i]),col="red")+ylab("")+
-    #ggtitle(aes_string("aaa",))+
     xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
                "Time:",cases$time[i],"Channel:",cases$channel[i]))+
     scale_color_discrete(guide=FALSE)+
-    #scale_y_continuous(labels = "",breaks="")+
     theme(axis.text.y=element_blank(),
           axis.text.x = element_text(size=10),
           axis.title.x = element_text(size=10))+
@@ -376,25 +373,6 @@ ggsave("fig/f2_sepdist.pdf",width = 10, height = 5)
   }
 
 #Figure 3A
-#at t=24 hours
-
-#PCA
-pca.res<-df3.ref%>%
-  prcomp(center=TRUE,scale. = TRUE)
-
-pca.res$x%>%
-  as.tibble()%>%
-  mutate(cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
-  ggplot(aes(PC1,PC2))+
-  #geom_point(aes(col=cluster,alpha=0.6))+
-  geom_hex(aes(fill=..count..),bins=200)+
-  scale_color_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),
-                     name="",direction = -1)+
-  scale_alpha_continuous(guide=FALSE)+
-  scale_fill_viridis_c(guide=FALSE)+
-  geom_density2d(aes(color=cluster),bins=3)
-
-#ggsave("suppl/s_pca.png",width = 6, height = 6,dpi = 900)
 
 clplot1<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
@@ -456,7 +434,7 @@ clusterB.pred%>%
   scale_fill_viridis(guide=FALSE)+
   theme_bw()
 
-ggsave("suppl/ps4_f4b.pdf",width = 4, height = 6)
+#ggsave("suppl/ps4_f4b.pdf",width = 4, height = 6)
 #ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
 
 #FIGURE 4B
@@ -601,7 +579,6 @@ lapply(1,function(x) {
     mutate(perc.mean.count=100*mean.count/sum(mean.count),perc.sd.count=100*sd.count/sum(mean.count))%>%
     separate(time,c("time","h"),2)%>%
     mutate(time=as.numeric(time))%>%
-    #mutate(x=interaction(strain,time))%>%
     ungroup()%>%
     #switching group names
     mutate(cluster=replace(cluster,cluster==2&strain=="Bs02018",4),
