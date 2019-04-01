@@ -3,7 +3,6 @@
 #~~~~~~~~~~~~#
 
 library(tidyverse)
-library(dsHelper)
 library(viridis)
 library(flowCore)
 library(ggcyto)
@@ -11,13 +10,15 @@ library(cowplot)
 library(ggridges)
 library(mixtools)
 
+devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")
+library(dsHelper)
+
 
 #~~~~~~~~~~~~~#
 ###Functions###
 #~~~~~~~~~~~~~#
 
 #### GMM
-
 
   getEmMod<-function(inp.df,inp.type,inp.stain,inp.time,inp.channel,cutoff=5,lowPop=5,highPop=13){
     
@@ -32,12 +33,10 @@ library(mixtools)
       return
   }
   
-
-  #helper function: sdnorm to adjust for the mix:
-  #see: https://stackoverflow.com/questions/25313578/any-suggestions-for-how-i-can-plot-mixem-type-data-using-ggplot2
-  sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
-  
   getEmCutoff<-function(testmod){
+    
+    #helper function: sdnorm to adjust for the mix:
+    sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
     
     #writing function for both normals
     f <- function(x) {
@@ -48,7 +47,7 @@ library(mixtools)
     
   }
   
-  getEmPlot<-function(emcutoff,mix.mod,type="aa",stain=1,channel="FL1-AAA"){
+  getEmPlot<-function(emcutoff,mix.mod,type="aa",stain=1,channel="FL1-A"){
     
     mix.mod$x%>%
       as.data.frame()%>%
@@ -90,7 +89,6 @@ library(mixtools)
       highSD = res3[2],
       lowC = res2[1],
       highC = res2[2],
-      #new:
       popsep = popsep
     )
   }
