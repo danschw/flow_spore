@@ -1,16 +1,18 @@
 source("src/functions.R")
 
 #### Figure 1 - Separation of Cells vs Spores possible, overview plot ####
-#loading
-sample.var<-c("strain","ident","stain","mode","run")
-fcsset1<-flowCreateFlowSet(filepath = "data/f1/",sample_variables =sample.var)
-
-#gating
-fcsset1.g<-fcsset1%>%
-  Subset(.,norm2Filter("asinh.FSC.H", "asinh.FSC.W",filterId="norm_ssc.fsc",scale=1))%>%
-  Subset(.,norm2Filter("asinh.SSC.H", "asinh.SSC.W",filterId="norm_ssc.fsc",scale=1))
-
-df1<-flowFcsToDf(fcsset1.g)
+{
+  #loading
+  sample.var<-c("strain","ident","stain","mode","run")
+  fcsset1<-flowCreateFlowSet(filepath = "data/f1/",sample_variables =sample.var)
+  
+  #gating
+  fcsset1.g<-fcsset1%>%
+    Subset(.,norm2Filter("asinh.FSC.H", "asinh.FSC.W",filterId="norm_ssc.fsc",scale=1))%>%
+    Subset(.,norm2Filter("asinh.SSC.H", "asinh.SSC.W",filterId="norm_ssc.fsc",scale=1))
+  
+  df1<-flowFcsToDf(fcsset1.g)
+}
 
 {
 #SSC-Plot
@@ -74,7 +76,7 @@ S2.plot<-df1%>%
 S2.plot
 
 # Legend Plot
-leg.plot<-df1%>%
+legend.plot<-df1%>%
   select(asinh.FL1.A,ident,stain,run)%>%
   ggplot(aes(asinh.FL1.A))+geom_density(aes(fill=ident),alpha=0.4)+
   ylab("")+xlab("")+
@@ -92,12 +94,12 @@ leg.plot<-df1%>%
   geom_rect(aes(xmin = -10, xmax = 100, ymin = 0, ymax = 1),color = "white", size = 2, fill = "white")
 
 
-leg.plot
+legend.plot
 }
 
-plot_grid(SSC.plot,FSC.plot,PI.plot,S1.plot,S2.plot,leg.plot,ncol = 3,labels = "AUTO")
+plot_grid(SSC.plot,FSC.plot,PI.plot,S1.plot,S2.plot,legend.plot,ncol = 3,labels = "AUTO")
 
-ggsave("fig/f1_roc.pdf",width = 9, height = 5,units = "in",dpi=300)
+ggsave("fig/Figure_1.pdf",width = 9, height = 5,units = "in",dpi=300)
 
 #### Figure 2: - Measuring cells and spores together: ability to separate ####
 
@@ -110,36 +112,16 @@ ggsave("fig/f1_roc.pdf",width = 9, height = 5,units = "in",dpi=300)
                                sample_variables=sample.var,additional_variable = 30,transformation = TRUE)
   fcsset2.2<-flowCreateFlowSet(filepath = "data/f2/set5_cells+spores_90/",
                                sample_variables =sample.var,additional_variable = 90,transformation = TRUE)
-  fcsset2.5<-rbind2(fcsset2.1,fcsset2.2)
 }
 
-#gating check
-
-fcsset2.5%>%
-  autoplot("asinh.FSC.H","asinh.FSC.W",bins=200)+
-  theme_minimal()
-
-fcsset2.5%>%
-  Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale.factor = 5))%>%
-  autoplot("asinh.FSC.H","asinh.FSC.W",bins=200)+
-  theme_minimal()
-
-fcsset2.5g<-fcsset2.5%>%
-  Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=5))
-
-#to df
-df2<-flowFcsToDf(fcsset2.5g)%>%
+df2<-fcsset2.5<-rbind2(fcsset2.1,fcsset2.2)%>%
+  Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=5))%>%
+  flowFcsToDf(.)%>%
   dplyr::filter(ident=="Cells+spores")%>%
   select(type,stain,time,asinh.FL1.A,asinh.FL3.A,asinh.FSC.A,asinh.SSC.A)%>%
   gather("channel","value",4:7)
 
 {
-#all cases
-casesPre<-unique(with(df2,interaction(type,stain,time,channel,sep = "_")))%>%
-  as.data.frame()%>%
-  separate(col=1,into=c("type","stain","time"),sep="_")
-casesPre
-
 #selected cases and set starting points for EMM depending on channel
 cases1<-data.frame(
   type=c("PI","PI","PI","SYBR1","SYBR1","SYBR1","SYBR2","SYBR2","SYBR2","unstained","unstained"),
@@ -156,7 +138,7 @@ cases$time[12:20]<-90
 cases$lowPop[14]<-10;cases$highPop[14]<-12
 }
 
-## gm for all models
+## gmm for all samples
 models.list<-Map(function(type,stain,time,channel,cutoff,lowPop,highPop){
   mod.t<-getEmMod(df2,type,stain,time,channel,cutoff,lowPop,highPop)
 },type=cases$type,stain=cases$stain,time=cases$time,channel=cases$channel,
@@ -165,9 +147,7 @@ cutoff=cases$cutoff,lowPop=cases$lowPop,highPop=cases$highPop)
 #getting cutoffs
 cutoffs.list<-sapply(models.list,function(x) getEmCutoff(x))
 
-#plotting
-
-## Supplemental 3
+## Supplemental figure 3
 i=1;plot.list<-list()
 sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
 
@@ -202,86 +182,72 @@ for (i in 1:length(models.list)){
 
 do.call(plot_grid,c(plot.list,ncol = 4))
 
-#plot_grid()
-ggsave("suppl/ps3_separation.pdf",width=16,height = 24)
-ggsave("suppl/ps3_separation.png",width=16,height = 24)
-
-## Get Group parameters
-
-{
-cases2<-cbind(cases,popsep=cutoffs.list)
-
-allp.list.P<-Map(
-  function(type,stain,time,channel,popsep) getGroupParam(
-    inp.df=df2,inp.type=type, inp.stain=stain, inp.time=time, inp.channel=channel, popsep=popsep),
-  type=cases$type,stain=cases$stain,time=cases$time,channel=cases$channel,popsep=cases2$popsep)
-
-allp.list<-allp.list.P%>%do.call("rbind",.) 
-
-#critical value
-crit.val<-qnorm(0.001/2,lower.tail = TRUE)%>%
-  abs()
-
-tx<-allp.list%>%
-  mutate(diffM=highM-lowM,
-         #sdPx=((highC-1)*highSD^2)+((lowC-1)*lowSD^2)/(highC+lowC-2),
-         sdP2=((highC-1)*highSD^2+(lowC-1)*lowSD^2)/(lowC+highC-2))%>%
-  mutate(sem=sqrt((sdP2/highC)+(sdP2/lowC)))%>%
-  mutate(CI95=crit.val*sem)
-}
+ggsave("suppl/Supplemental3.pdf",width=16,height = 24)
+ggsave("suppl/Supplemental3.png",width=16,height = 24)
 
 
-#Supplemental 1
-
-ps2.1<-tx%>%
+#get standard deviations and means of different groups
+optimization_differences<-Map(
+    function(type,stain,time,channel,popsep) getGroupParam(
+      inp.df=df2,inp.type=type, inp.stain=stain, inp.time=time, inp.channel=channel, popsep=popsep),
+    type=cases$type,stain=cases$stain,time=cases$time,channel=cases$channel,popsep=cutoffs.list)%>%
+      do.call("rbind",.)%>%
+  mutate(
+    diffM=highM-lowM, #difference between means
+    pooledSD=((highC-1)*highSD^2+(lowC-1)*lowSD^2)/(lowC+highC-2) #pooled standard deviation
+    )%>%
   separate(1,into=c("type","stain","channel","time"),sep="_")%>%
-  mutate(time=ifelse(time==30,30,240))%>%
+  mutate(time=ifelse(time==30,30,240))
+
+PS2.A<-optimization_differences%>%
   ggplot(aes(stain,diffM,fill=interaction(channel,type)))+
   geom_bar(stat="identity",position=position_dodge(),alpha=0.8)+
-  geom_errorbar(aes(ymin=diffM-CI95,ymax=diffM+CI95,group=interaction(channel,type)),
+  #geom_boxplot(stat="identity",position=position_dodge(),alpha=0.8)+
+  geom_errorbar(aes(ymin=diffM-pooledSD,ymax=diffM+pooledSD,group=interaction(channel,type)),
                 position=position_dodge(),alpha=0.8)+
   ylab("Difference spore/cell distributions")+xlab("")+
   facet_grid(time~.)+
   scale_fill_discrete(name="")+
   scale_x_discrete(label=c("unstained","1x","2x","4x"))
 
-ps2.1
+PS2.A
 
-viability <- read_csv("data/viability2.csv")%>%
-  gather("tripl","value",5:7)
-
-ps2.2<-viability%>%
+PS2.B<-read_csv("data/viability2.csv")%>%
+  gather("tripl","value",5:7)%>%
   #mutate(conc=fct_reorder(conc))
   dplyr::filter(!is.na(value))%>%
   #mutate()%>%
   ggplot(aes(fct_inorder(conc),as.numeric(value)/210,col=stain))+
-  geom_point(aes(shape=type),position=position_dodge(width = 0.0))+
+  geom_point(aes(shape=type),alpha=0.9,
+             position=position_dodge(width = 0.3),
+             size=3)+
   geom_line(stat="summary",fun.y="mean",
-            aes(as.numeric(fct_inorder(conc)),as.numeric(value)/210,
-                linetype=type),alpha=0.8)+
+            aes(as.numeric(fct_inorder(conc)),as.numeric(value)/210,linetype=type),
+            alpha=0.8,size=1,position=position_dodge(width = 0.3))+
   facet_grid(time~.)+
   ylab("% CFU")+xlab("")+
   scale_color_discrete(name="")+
   scale_shape_discrete(name="",labels=c("non-sporulating cells","purified spores"))+
   scale_linetype_discrete(name="",labels=c("non-sporulating cells","purified spores"))
 
-plot_grid(ps2.1,ps2.2,nrow = 2,labels = c("A","B"))
+PS2.B
 
-ggsave("suppl/ps1_opt.pdf",width = 8, height = 10,dpi=300,units = "in")
-ggsave("suppl/ps1_opt.png",width = 8, height = 10,dpi=300,units = "in")
+plot_grid(PS2.A,PS2.B,nrow = 2,labels = c("A","B"))
 
-fig2.1<-tx%>%
-  separate(1,into=c("type","stain","channel","time"),sep="_")%>%
+ggsave("suppl/Supplemental1.pdf",width = 8, height = 10,dpi=300,units = "in")
+ggsave("suppl/Supplemental1.png",width = 8, height = 10,dpi=300,units = "in")
+
+FIG2.1<-optimization_differences%>%
   dplyr::filter(time==30&stain==2 |time==30&stain==0)%>%
   ggplot(aes(interaction(type,channel),diffM,fill=channel))+
   geom_bar(stat="identity",position="dodge",alpha=0.7)+
-  geom_errorbar(aes(ymin=diffM-CI95,ymax=diffM+CI95),width=0.5)+xlab("")+
+  geom_errorbar(aes(ymin=diffM-pooledSD,ymax=diffM+pooledSD),width=0.5)+xlab("")+
   ylab("Difference spore/cell distributions")+scale_color_discrete(name="")+
   scale_y_continuous(expand = c(0,0))+
   theme(legend.position = c(0.6,0.8),axis.text.x = element_text(angle=30,hjust=1))+
   scale_x_discrete(label=c("SYBR1","SYBR2","PI","FSC","SSC"))
 
-fig2.1
+FIG2.1
 
 {
   f2.2<-df2%>%
@@ -292,25 +258,15 @@ fig2.1
     dplyr::select(-id)
     
   #translate so that cutoff is at 0
-  allp.list[5,]
-  f2.2$asinh.FL1.A[f2.2$type=="SYBR1"]<-f2.2$asinh.FL1.A[f2.2$type=="SYBR1"]-
-    allp.list$popsep[5]
-  
-  allp.list[8,]
-  f2.2$asinh.FL1.A[f2.2$type=="SYBR2"]<-f2.2$asinh.FL1.A[f2.2$type=="SYBR2"]-
-    allp.list$popsep[8]
-
-  allp.list[10,]
-  allp.list[11,]
-  f2.2$asinh.FSC.A<-f2.2$asinh.FSC.A-allp.list$popsep[10]
-  f2.2$asinh.SSC.A<-f2.2$asinh.SSC.A-allp.list$popsep[11]
-  
-  allp.list[2,]
-  f2.2$asinh.FL3.A<-f2.2$asinh.FL3.A-allp.list$popsep[2]
+  f2.2$asinh.FL1.A[f2.2$type=="SYBR1"]<-f2.2$asinh.FL1.A[f2.2$type=="SYBR1"]-cutoffs.list[5]
+  f2.2$asinh.FL1.A[f2.2$type=="SYBR2"]<-f2.2$asinh.FL1.A[f2.2$type=="SYBR2"]-cutoffs.list[8]
+  f2.2$asinh.FSC.A<-f2.2$asinh.FSC.A-cutoffs.list[10]
+  f2.2$asinh.SSC.A<-f2.2$asinh.SSC.A-cutoffs.list[11]
+  f2.2$asinh.FL3.A<-f2.2$asinh.FL3.A-cutoffs.list[2]
   
 }
 
-fig2.2<-f2.2%>%
+FIG2.2<-f2.2%>%
   gather("channel","value",4:7)%>%
   dplyr::mutate(channel=paste(channel,type,sep="."))%>%
   dplyr::select(-type)%>%
@@ -326,11 +282,10 @@ fig2.2<-f2.2%>%
   xlim(c(-5,5))+
   xlab("translated scatter/fluorescence signal")+ylab("")
 
+FIG2.2
 
-fig2.2
-
-plot_grid(fig2.1,fig2.2,rel_widths = c(0.33,0.66),labels = c("A","B"))
-ggsave("fig/f2_sepdist.pdf",width = 10, height = 5)
+plot_grid(FIG2.1,FIG2.2,rel_widths = c(0.33,0.66),labels = c("A","B"))
+ggsave("fig/Figure_2.pdf",width = 10, height = 5)
 
 #### Figure 3+4: Clustering ####
 
