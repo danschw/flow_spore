@@ -75,7 +75,7 @@ S2.plot<-df1%>%
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)
 S2.plot
 
-# Legend Plot
+# legend Plot
 legend.plot<-df1%>%
   select(asinh.FL1.A,ident,stain,run)%>%
   ggplot(aes(asinh.FL1.A))+geom_density(aes(fill=ident),alpha=0.4)+
@@ -101,7 +101,7 @@ plot_grid(SSC.plot,FSC.plot,PI.plot,S1.plot,S2.plot,legend.plot,ncol = 3,labels 
 
 ggsave("fig/Figure_1.pdf",width = 9, height = 5,units = "in",dpi=300)
 
-#### Figure 2: - Measuring cells and spores together: ability to separate ####
+#### Figure 2: - Measuring cells and spores together: ability to separate with GMM ####
 
 {#loading
   rm(list=ls())
@@ -186,20 +186,23 @@ ggsave("suppl/Supplemental3.pdf",width=16,height = 24)
 ggsave("suppl/Supplemental3.png",width=16,height = 24)
 
 
-#get standard deviations and means of different groups
-optimization_differences<-Map(
-    function(type,stain,time,channel,popsep) getGroupParam(
-      inp.df=df2,inp.type=type, inp.stain=stain, inp.time=time, inp.channel=channel, popsep=popsep),
-    type=cases$type,stain=cases$stain,time=cases$time,channel=cases$channel,popsep=cutoffs.list)%>%
-      do.call("rbind",.)%>%
+#get distribution parameters
+distr.values<-lapply(models.list,function(x) {
+  cbind(t(x$mu),t(x$sigma))%>%
+    return()
+  })%>%
+  do.call("rbind",.)%>%
+  as_tibble()%>%
+  magrittr::set_colnames(c("mu_1","mu_2","sd_1","sd_2"))%>%
   mutate(
-    diffM=highM-lowM, #difference between means
-    pooledSD=((highC-1)*highSD^2+(lowC-1)*lowSD^2)/(lowC+highC-2) #pooled standard deviation
-    )%>%
-  separate(1,into=c("type","stain","channel","time"),sep="_")%>%
-  mutate(time=ifelse(time==30,30,240))
+    diffM=mu_2-mu_1, #difference between means
+    pooledSD=sqrt((sd_1^2+sd_2^2)/2) #pooled standard deviation
+  )%>%
+  cbind(.,cases)
+  
+distr.values
 
-PS2.A<-optimization_differences%>%
+PS2.A<-distr.values%>%
   ggplot(aes(stain,diffM,fill=interaction(channel,type)))+
   geom_bar(stat="identity",position=position_dodge(),alpha=0.8)+
   #geom_boxplot(stat="identity",position=position_dodge(),alpha=0.8)+
@@ -237,7 +240,7 @@ plot_grid(PS2.A,PS2.B,nrow = 2,labels = c("A","B"))
 ggsave("suppl/Supplemental1.pdf",width = 8, height = 10,dpi=300,units = "in")
 ggsave("suppl/Supplemental1.png",width = 8, height = 10,dpi=300,units = "in")
 
-FIG2.1<-optimization_differences%>%
+FIG2.1<-distr.values%>%
   dplyr::filter(time==30&stain==2 |time==30&stain==0)%>%
   ggplot(aes(interaction(type,channel),diffM,fill=channel))+
   geom_bar(stat="identity",position="dodge",alpha=0.7)+
@@ -284,52 +287,46 @@ FIG2.2<-f2.2%>%
 
 FIG2.2
 
-plot_grid(FIG2.1,FIG2.2,rel_widths = c(0.33,0.66),labels = c("A","B"))
+plot_grid(FIG2.2,FIG2.1,rel_widths = c(0.60,0.4),labels = c("A","B"))
 ggsave("fig/Figure_2.pdf",width = 10, height = 5)
 
 #### Figure 3+4: Clustering ####
-
-## Set9: Figure 3 and 4B
-
 {
+  #load
   rm(list=ls())
   source("src/functions.R")
   sample.var<-c("strain","time","tripl")
-  #simple plot
   fcsset3<-flowCreateFlowSet(filepath = "data/f3/set9/",sample_variables=sample.var,transformation = TRUE)
   
-  fcsset3G<-fcsset3%>%
+  df3<-fcsset3%>%
     Subset(norm2Filter("asinh.FSC.H","asinh.FSC.W",scale.factor = 2))%>%
-    Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))
-  
-  #to df
-  df3<-fcsset3G%>%
-    flowFcsToDf()%>%
-    separate(length(fcsset3G@colnames)+1,into = sample.var,sep = "_")
+    Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))%>%
+    flowFcsToDf(.)
+
 }
-  #Get centers
+
+  #Get reference centers from suitable samples
 {
   df3.ref<-df3%>%  
     dplyr::filter(strain=="Bs02003")%>%
     dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
     as.matrix()
   
-  #finding centers: with random starting points
+  #finding centers with random starting points, 1000 repetitions
   set.seed(1)
-  Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
+  #Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
+  Appl.kmeans <- kmeans(x = df3.ref,centers = 3,nstart = 1000)
   
   #center positions
-  centers.list<-list(Appl.kmeans$centers)
-  centers.list.df<-as.data.frame(centers.list)
-  
+  centers.list.df<-as.data.frame(Appl.kmeans$centers)
   write.csv(centers.list.df,"suppl/centers_f3.csv")
-
   center.locs<-factor(Appl.kmeans$cluster,levels=c(2,1,3))
+  
   }
 
 #Figure 3A
 
-clplot1<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
+clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
   #geom_point(aes(col=cluster))+
   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
@@ -356,20 +353,16 @@ clplot2<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))
   geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="red",size=1)+
   geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="red",size=1)
 
-clplot2
-
 plot_grid(clplot1,clplot2,align = "h")
-#ggsave("fig/f3_class.pdf",width = 8, height = 4)
-ggsave("fig/f3_class.png",width = 8, height = 4,dpi = 900)
+ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
 
-
-#Figure 3
+#Figure 4
 {
   df3.split<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)
   df3.list<-split(df3.split,df3$strain)
   
   clusterB.pred<-base::Map(function(x,y) {
-    cbind(x,cluster=predict.clusters2(x[,c(-4,-5,-6)],y))%>%
+    cbind(x,cluster=cl_predict(x[,c(-4,-5,-6)],y))%>%
       as.data.frame()
   },
   df3.list,centers.list)%>%

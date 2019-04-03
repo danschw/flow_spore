@@ -9,6 +9,7 @@ library(ggcyto)
 library(cowplot)
 library(ggridges)
 library(mixtools)
+library(clue)
 
 if(!require(dsHelper)){
   devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")  
@@ -31,18 +32,19 @@ library(dsHelper)
       dplyr::filter(channel==inp.channel)%>%
       dplyr::filter(value>cutoff)%>%
       with(value)%>%
-      normalmixEM(lambda = .5, mu = c(lowPop, highPop), sigma = 0.3,k = 2)%>%
+      normalmixEM(lambda = .5, mu = c(lowPop, highPop),k = 2, sigma = 0.3)%>%
       return
   }
   
+  
   getEmCutoff<-function(testmod){
     
-    #helper function: sdnorm to adjust for the mix:
+    #helper function: sdnorm to adjust for mix
     sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
     
-    #writing function for both normals
+    #function both normals
     f <- function(x) {
-      sdnorm(x, m=testmod$mu[1], sd=testmod$sigma[1], lambda=testmod$lambda[1]) -
+      sdnorm(x, m=testmod$mu[1], sd=testmod$sigma[1], lambda=testmod$lambda[1]) - #-
         sdnorm(x, m=testmod$mu[2], sd=testmod$sigma[2], lambda=testmod$lambda[2]) 
     }
     uniroot(f, interval=c(min(testmod$mu), max(testmod$mu)))$root
@@ -122,17 +124,4 @@ predict.clusters2<-function (A, B, method = c("euclidean", "manhattan", "minkows
   for (k in seq_len(NROW(B))) out[, k] <- FOO(A, B[k, ])
 
   max.col(-out)
-}
-
-kmeans.rep <- function(df,sample="noinfo",rep=10){
-  km.mods <- lapply(1:rep,function(x) kmeans(df,3))
-
-  ss.vals <- lapply(1:rep,function(x)km.mods[[x]]$betweenss/km.mods[[x]]$totss)%>%
-    do.call("rbind",.)%>%
-    as.data.frame()%>%
-    mutate(rep=row_number())
-
-  chosenRepeat <- ss.vals[ss.vals$V1==max(ss.vals$V1),]$rep%>%min()
-
-  km.mods[[chosenRepeat]]
 }
