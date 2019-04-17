@@ -292,7 +292,6 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
 
 #### Figure 3+4: Clustering ####
 {
-  #load
   rm(list=ls())
   source("src/functions.R")
   sample.var<-c("strain","time","tripl")
@@ -305,52 +304,28 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
 }
 
 {
-  
-  df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
-  
-  df3.ref%>%
-    #dplyr::select(asinh.FSC.A,asinh.FL1.A)%>%
-    #head(.,1000)%>%
-    mvnormalmixEM(.,k = 3,maxit = 10)
+  #Load reference with all populations
+  df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3) 
+  set.seed(1)
+  df3.mix<-mclust::Mclust(data = df3.ref,G = 3)
 
-  library(mclust)  
+  #plot(df3.mix,what = "density")
+  # summary(df3.mix)
   
-  nrow(df3)
+  #getting centers for visualization and export
+  centers.list.df<-t(df3.mix$parameters$mean)
+  write.csv(centers.list.df,"suppl/centers_f3.csv")
+  center.locs<-factor(df3.mix$classification,levels=c(2,1,3))
   
-  df3.mix<-df3.ref%>%
-    #dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
-    #head(.,100000)%>%
-    mclust::Mclust(data = .,G = 3)
-
-  plot(df3.mix,"classification")
-  plot(df3.mix,what = "density")
-  plot(df3.mix, what = "uncertainty")
-  
-  summary(df3.mix)
-  predict(df3.mix)
-  
-  library(factoextra)
-  fviz_mclust(df3.mix,what = "classification",geom="point")
+  # 
+  # predict(df3.mix)
+  # 
+  # library(factoextra)
+  # fviz_mclust(df3.mix,what = "classification",geom="point")
   
 }
 
-  #Get reference centers from suitable sample
-{
-  df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
-  #finding centers with random starting points, 1000 repetitions
-  set.seed(1)
-  #Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
-  Appl.kmeans <- kmeans(x = df3.ref,centers = 3,nstart = 1000)
-  
-  #center positions
-  centers.list.df<-as.data.frame(Appl.kmeans$centers)
-  write.csv(centers.list.df,"suppl/centers_f3.csv")
-  center.locs<-factor(Appl.kmeans$cluster,levels=c(2,1,3))
-  }
-
-centers.list.df<-t(df3.mix$parameters$mean)
-
-clplot1<-data.frame(df3.ref,cluster=df3.mix$classification)%>%
+clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
   geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
@@ -363,32 +338,6 @@ clplot1<-data.frame(df3.ref,cluster=df3.mix$classification)%>%
   geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="blue",size=1)+
   geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="blue",size=1)+
   geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="blue",size=1)
-
-clplot1
-
-
-
-
-
-
-
-
-
-#Figure 3A
-
-clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
-  geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
-  geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-  xlim(c(10,15))+ylim(c(2.5,15))+
-  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-                     guide = FALSE)+
-  scale_alpha_continuous(guide = FALSE)+
-  theme_bw()+
-  geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="red",size=1)+
-  geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="red",size=1)+
-  geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="red",size=1)
 
 clplot1
 
@@ -410,18 +359,25 @@ clplot2
 plot_grid(clplot1,clplot2,align = "h")
 ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
 
-
-
-#Supplemental4
+# Prediction for other cases
 {
   df3.list<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)%>%
     split(.,df3$strain)
-  clusterB.pred<-do.call(rbind,list(
-    kmeans.predict(model.kmeans = Appl.kmeans,newdata = df3.list[["Bs02003"]]),
-    kmeans.predict(model.kmeans = Appl.kmeans,newdata = df3.list[["Bs02025"]])
-  ))
+  
+  clusterB.predict<-c(
+    predict.Mclust(df3.mix,newdata = df3.list[["Bs02003"]][,1:3])$classification,
+    predict.Mclust(df3.mix,newdata = df3.list[["Bs02025"]][,1:3])$classification
+  )
+  
+  clusterB.annot<-do.call(rbind,list(
+    df3.list[["Bs02003"]],
+    df3.list[["Bs02025"]])
+  )
+  
+  clusterB.pred<-cbind(clusterB.annot,cluster=clusterB.predict)
 }
 
+#supplemental 4
 clusterB.pred%>%
   #dplyr::filter(!stain=="unstained")%>%
   #dplyr::filter(stain==x)%>%
@@ -436,34 +392,108 @@ clusterB.pred%>%
 ggsave("suppl/Supplemental_4.pdf",width = 4, height = 6)
 #ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
 
-#FIGURE 4B
 
-{
-c.count.B<-clusterB.pred%>%
-  group_by(strain,time,cluster,tripl)%>%
-  summarize(count=n())%>%
-  ungroup()%>%
-  group_by(strain,time,tripl)%>%
-  mutate(perc.mean.count=100*count/sum(count))
 
-  ccount2<-c.count.B%>%
-  ggplot(aes(strain,perc.mean.count,fill=factor(cluster,levels=c(1,3,2))))+
-  #geom_point(size=1,position=position_dodge(),stat="identity")+
-  geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
-  # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
-  #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
-  ylab("Proportion / %")+xlab("time / h")+
-  scale_y_continuous(expand = c(0,0))+
-  scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
-                     alpha = 0.8)+
-  theme_minimal()+
-  theme(panel.spacing = unit(1, "lines"),legend.title=element_blank(),
-        legend.position = c(0.44,0.82))+
-  xlab("")
 
-ccount2
 
-}
+
+
+
+
+
+
+
+
+# 
+# 
+#   #Get reference centers from suitable sample
+# {
+#   df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
+#   #finding centers with random starting points, 1000 repetitions
+#   set.seed(1)
+#   #Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
+#   Appl.kmeans <- kmeans(x = df3.ref,centers = 3,nstart = 1000)
+#   
+#   #center positions
+#   centers.list.df<-as.data.frame(Appl.kmeans$centers)
+# 
+#   }
+# #Figure 3A
+# 
+# clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
+#   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
+#   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
+#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
+#   xlim(c(10,15))+ylim(c(2.5,15))+
+#   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
+#                      guide = FALSE)+
+#   scale_alpha_continuous(guide = FALSE)+
+#   theme_bw()+
+#   geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="red",size=1)+
+#   geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="red",size=1)+
+#   geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="red",size=1)
+# 
+# clplot1
+# 
+# clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
+#   ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
+#   geom_hex(aes(fill=as.factor(cluster)),bins=300)+
+#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
+#   xlim(c(10,15))+ylim(c(9,12))+
+#   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
+#                      guide=FALSE)+
+#   scale_alpha_continuous(guide = FALSE)+
+#   theme_bw()+
+#   geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="red",size=1)+
+#   geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="red",size=1)+
+#   geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="red",size=1)
+# 
+# clplot2
+# 
+# plot_grid(clplot1,clplot2,align = "h")
+# ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# #FIGURE 4B
+# head(clusterB.pred)
+# {
+# c.count.B<-clusterB.pred%>%
+#   group_by(strain,time,cluster,tripl)%>%
+#   summarize(count=n())%>%
+#   ungroup()%>%
+#   group_by(strain,time,tripl)%>%
+#   mutate(perc.mean.count=100*count/sum(count))
+# 
+#   ccount2<-c.count.B%>%
+#   ggplot(aes(strain,perc.mean.count,fill=factor(cluster,levels=c(1,3,2))))+
+#   #geom_point(size=1,position=position_dodge(),stat="identity")+
+#   geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
+#   # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
+#   #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
+#   ylab("Proportion / %")+xlab("time / h")+
+#   scale_y_continuous(expand = c(0,0))+
+#   scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
+#                      alpha = 0.8)+
+#   theme_minimal()+
+#   theme(panel.spacing = unit(1, "lines"),legend.title=element_blank(),
+#         legend.position = c(0.44,0.82))+
+#   xlab("")
+# 
+# ccount2
+# 
+# }
 
 #### Figure 4A
 
@@ -477,80 +507,65 @@ ccount2
     Subset(norm2Filter("asinh.FSC.H","asinh.FSC.W",scale.factor = 2))%>%
     Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))
   
-#to df
-df3A<-fcsset3AG%>%
+  #to df
+  df3A<-fcsset3AG%>%
   flowFcsToDf()
+  
+  df3A<-df3A[df3A$stain!="unstained",]
 }
-# str(df3A)
-# ttest<-df3A%>%
-#   group_by(strain,time,stain, tripl)%>%
-#   summarize(n=n())
-# 
-# table(ttest$stain)
 
 {
-  ## Use kmeans to identify subsets
   #selecting reference 
   Bs2003.reference<-ref.ds(strn="Bs02003",tim="48h",stn="1",df=df3A)
   Bs2018.reference<-ref.ds(strn="Bs02018",tim="56h",stn="2",df=df3A)
   Bs2020.reference<-ref.ds(strn="Bs02020",tim="56h",stn="1",df=df3A)
   
   set.seed(1)
-  Bs2003.kmeans <- kmeans(x = Bs2003.reference,centers = 3,nstart = 1000)
-  Bs2018.kmeans <- kmeans(x = Bs2018.reference,centers = 3,nstart = 1000)
-  Bs2020.kmeans <- kmeans(x = Bs2020.reference,centers = 3,nstart = 1000)
-  
-  # Bs2003.kmeans<-kmeans.rep(Bs2003.reference,rep = 1000)
-  # Bs2018.kmeans<-kmeans.rep(Bs2018.reference,rep = 1000)
-  # Bs2020.kmeans<-kmeans.rep(Bs2020.reference,rep = 1000)
+  Bs2003.mix<-mclust::Mclust(data = Bs2003.reference,G = 3)
+  Bs2018.mix<-mclust::Mclust(data = Bs2018.reference,G = 3)
+  Bs2020.mix<-mclust::Mclust(data = Bs2020.reference,G = 3)
 }
 
 #Supplemental 
 
-data.frame(Bs2003.reference,cluster=Bs2003.kmeans$cluster)%>%
+data.frame(Bs2003.reference,cluster=Bs2003.mix$classification)%>%
     ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
     geom_hex(aes(fill=log(..count..)),bins=300)+
     facet_grid(.~cluster)+xlim(c(10,15))+ylim(c(2.5,15))
   
-data.frame(Bs2018.reference,cluster=Bs2018.kmeans$cluster)%>%
+data.frame(Bs2018.reference,cluster=Bs2018.mix$classification)%>%
     ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
     geom_hex(aes(fill=log(..count..)),bins=300)+
     facet_grid(.~cluster)+xlim(c(10,15))+ylim(c(2.5,15))
   
-data.frame(Bs2020.reference,cluster=Bs2020.kmeans$cluster)%>%
+data.frame(Bs2020.reference,cluster=Bs2020.kmeans$classification)%>%
     ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
     geom_hex(aes(fill=log(..count..)),bins=300)+
     facet_grid(.~cluster)+xlim(c(10,15))+ylim(c(2.5,15))
   
-  ###splitting and applying kmeans centers to predict
+  ###splitting and applying gmm
 {
-  centers.list<-list(Bs2003.kmeans$centers,
-                     Bs2018.kmeans$centers,
-                     Bs2020.kmeans$centers)
+  centers.list<-list(Bs2003.mix$classification,
+                     Bs2018.mix$classification,
+                     Bs2020.mix$classification)
   
   df3A.list<-df3A%>%
     select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,stain,time)%>%
     split(.$strain)
   
-  cluster.pred.A<-rbind(
-    kmeans.predict(model.kmeans = Bs2003.kmeans,newdata = df3A.list[["Bs02003"]]),
-    kmeans.predict(model.kmeans = Bs2018.kmeans,newdata = df3A.list[["Bs02018"]]),
-    kmeans.predict(model.kmeans = Bs2018.kmeans,newdata = df3A.list[["Bs02020"]])
+  cluster.predict.A<-c(
+    predict(Bs2003.mix,newdata = df3A.list[["Bs02003"]][,1:3])$classification,
+    predict(Bs2018.mix,newdata = df3A.list[["Bs02018"]][,1:3])$classification,
+    predict(Bs2018.mix,newdata = df3A.list[["Bs02020"]][,1:3])$classification
   )
   
-  # 
-  # names(df3A.list)
-  # 
-  # cluster.pred.A<-base::Map(function(x,y) {
-  #  cbind(x,cluster=clue::cl_predict(newdata=x[,c(-4,-5,-6)],y))%>%
-  #    as.data.frame()},df3A.list,centers.list)%>%
-  #  do.call(rbind,.)
-  # 
-  # cluster.pred.A<-base::Map(function(x,y) {
-  #   cbind(x,cluster=predict.clusters2(x[,c(-4,-5,-6)],y))%>%
-  #     as.data.frame()},df3A.list,centers.list)%>%
-  #   do.call(rbind,.)
-  # 
+  cluster.annot.A<-do.call(rbind,list(
+    df3A.list[["Bs02003"]],
+    df3A.list[["Bs02018"]],
+    df3A.list[["Bs02020"]])
+  )
+  
+  cluster.pred.A<-cbind(cluster.annot.A,cluster=cluster.predict.A)
 }
 
 #Supplemental
@@ -586,15 +601,15 @@ lapply(1,function(x) {
       scale_fill_viridis()
   })
 
-table(c.count.A$strain,c.count.A$time,c.count.A$cluster)
-
+table(c.count.A$strain,c.count.A$time,c.count.A$cluster,c.count.A$stain)
 table(c.count.A$cluster)
+table(df3A$strain,df3A$time,df3A$stain,df3A$tripl)
 
 {
   c.count.A<-cluster.pred.A%>%
     group_by(strain,time,cluster,stain)%>%
     summarize(count=n())%>%
-    ungroup()
+    ungroup()%>%
     # group_by(strain,time,cluster)%>%
     # summarize(mean.count=mean(count),sd.count=sd(count))%>%
     # ungroup()%>%
@@ -603,7 +618,10 @@ table(c.count.A$cluster)
     separate(time,c("time","h"),2)%>%
     mutate(time=as.numeric(time))%>%
     group_by(strain,time,stain)%>%
-    mutate(perc.mean.count=100*count/sum(count))%>%
+    mutate(perc.count=100*count/sum(count))
+  
+  c.count.A
+  
     #ungroup()%>%
     #switching group names
     mutate(cluster=replace(cluster,cluster==2&strain=="Bs02018",4),
@@ -616,13 +634,20 @@ table(c.count.A$cluster)
   
   c.count.A%>%write.csv(file = "suppl/population_count.csv")
   
-  ccount1<-c.count.A%>%
-    ggplot(aes(as.factor(time),perc.mean.count,fill=factor(cluster,levels=c(3,1,2))))+
+  str(c.count.A)
+  
+  
+ccount1<-c.count.A%>%
+    ggplot(aes(time,perc.count))+
     #geom_line(size=1,position=position_dodge(),stat="identity",aes(color=as.factor(cluster)))+
-    geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
+    geom_point(aes(x = time,fill=as.factor(cluster),group=time),
+               position=position_dodge())+
+    # geom_dotplot(aes(x = time,fill=as.factor(cluster),group=time),binaxis="y",
+    #              position=position_dodge(),stackdir = "center")+
     # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
     #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
-    #stat_summary(fun.y = "mean",geom = "line")+
+    stat_summary(aes(time,perc.count,col=as.factor(cluster)),
+                 fun.y = "mean",geom = "point",position=position_dodge(1))+
     ylab("Proportion / %")+xlab("time / h")+
     scale_y_continuous(expand = c(0,0))+
     facet_grid(strain~.)+
@@ -633,12 +658,15 @@ table(c.count.A$cluster)
     xlab("time / h")
   
   ccount1
-}
+
+  
+  
+  }
 
 plot_grid(ccount1,ccount2,nrow = 1,rel_widths = c(0.6,0.4),labels = c("A","B"))
 
 ggsave("fig/f4_applications.pdf",width = 8, height = 5)
-
+))}}
 #### Supplemental: Combinations ####
 
 {
