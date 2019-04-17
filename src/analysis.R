@@ -302,16 +302,41 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
     Subset(norm2Filter("asinh.FSC.H","asinh.FSC.W",scale.factor = 2))%>%
     Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))%>%
     flowFcsToDf(.)
-
 }
 
-  #Get reference centers from suitable samples
 {
-  df3.ref<-df3%>%  
-    dplyr::filter(strain=="Bs02003")%>%
-    dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
-    as.matrix()
   
+  df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
+  
+  df3.ref%>%
+    #dplyr::select(asinh.FSC.A,asinh.FL1.A)%>%
+    #head(.,1000)%>%
+    mvnormalmixEM(.,k = 3,maxit = 10)
+
+  library(mclust)  
+  
+  nrow(df3)
+  
+  df3.mix<-df3.ref%>%
+    #dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+    #head(.,100000)%>%
+    mclust::Mclust(data = .,G = 3)
+
+  plot(df3.mix,"classification")
+  plot(df3.mix,what = "density")
+  plot(df3.mix, what = "uncertainty")
+  
+  summary(df3.mix)
+  predict(df3.mix)
+  
+  library(factoextra)
+  fviz_mclust(df3.mix,what = "classification",geom="point")
+  
+}
+
+  #Get reference centers from suitable sample
+{
+  df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
   #finding centers with random starting points, 1000 repetitions
   set.seed(1)
   #Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
@@ -321,15 +346,41 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
   centers.list.df<-as.data.frame(Appl.kmeans$centers)
   write.csv(centers.list.df,"suppl/centers_f3.csv")
   center.locs<-factor(Appl.kmeans$cluster,levels=c(2,1,3))
-  
   }
+
+centers.list.df<-t(df3.mix$parameters$mean)
+
+clplot1<-data.frame(df3.ref,cluster=df3.mix$classification)%>%
+  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+  geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
+  geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
+  geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
+  xlim(c(10,15))+ylim(c(2.5,15))+
+  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
+                     guide = FALSE)+
+  scale_alpha_continuous(guide = FALSE)+
+  theme_bw()+
+  geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="blue",size=1)+
+  geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="blue",size=1)+
+  geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="blue",size=1)
+
+clplot1
+
+
+
+
+
+
+
+
 
 #Figure 3A
 
 clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  #geom_point(aes(col=cluster))+
+  geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
+  geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
   xlim(c(10,15))+ylim(c(2.5,15))+
   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
                      guide = FALSE)+
@@ -341,9 +392,10 @@ clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
 
 clplot1
 
-clplot2<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))%>%
-  ggplot(aes(asinh.SSC.A,asinh.FSC.A))+
+clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
+  ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
   geom_hex(aes(fill=as.factor(cluster)),bins=300)+
+  geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
   xlim(c(10,15))+ylim(c(9,12))+
   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
                      guide=FALSE)+
@@ -353,23 +405,22 @@ clplot2<-data.frame(df3.ref,cluster=factor(Appl.kmeans$cluster,levels=c(2,1,3)))
   geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="red",size=1)+
   geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="red",size=1)
 
+clplot2
+
 plot_grid(clplot1,clplot2,align = "h")
 ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
 
-#Figure 4
-{
-  df3.split<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)
-  df3.list<-split(df3.split,df3$strain)
-  
-  clusterB.pred<-base::Map(function(x,y) {
-    cbind(x,cluster=cl_predict(x[,c(-4,-5,-6)],y))%>%
-      as.data.frame()
-  },
-  df3.list,centers.list)%>%
-    do.call(rbind,.)
-}
 
-##Supplemental 4
+
+#Supplemental4
+{
+  df3.list<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)%>%
+    split(.,df3$strain)
+  clusterB.pred<-do.call(rbind,list(
+    kmeans.predict(model.kmeans = Appl.kmeans,newdata = df3.list[["Bs02003"]]),
+    kmeans.predict(model.kmeans = Appl.kmeans,newdata = df3.list[["Bs02025"]])
+  ))
+}
 
 clusterB.pred%>%
   #dplyr::filter(!stain=="unstained")%>%
@@ -382,7 +433,7 @@ clusterB.pred%>%
   scale_fill_viridis(guide=FALSE)+
   theme_bw()
 
-#ggsave("suppl/ps4_f4b.pdf",width = 4, height = 6)
+ggsave("suppl/Supplemental_4.pdf",width = 4, height = 6)
 #ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
 
 #FIGURE 4B
@@ -392,17 +443,15 @@ c.count.B<-clusterB.pred%>%
   group_by(strain,time,cluster,tripl)%>%
   summarize(count=n())%>%
   ungroup()%>%
-  group_by(strain,time,cluster)%>%
-  summarize(mean.count=mean(count),sd.count=sd(count))%>%
-  ungroup()%>%
-  group_by(strain,time)%>%
-  mutate(perc.mean.count=100*mean.count/sum(mean.count),perc.sd.count=100*sd.count/sum(mean.count))
+  group_by(strain,time,tripl)%>%
+  mutate(perc.mean.count=100*count/sum(count))
 
-ccount2<-c.count.B%>%
-  ggplot(aes(strain,perc.mean.count,fill=as.factor(cluster)))+
-  geom_bar(size=1,position=position_dodge(),stat="identity")+
-  geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
-                    group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
+  ccount2<-c.count.B%>%
+  ggplot(aes(strain,perc.mean.count,fill=factor(cluster,levels=c(1,3,2))))+
+  #geom_point(size=1,position=position_dodge(),stat="identity")+
+  geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
+  # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
+  #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
   ylab("Proportion / %")+xlab("time / h")+
   scale_y_continuous(expand = c(0,0))+
   scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
@@ -419,6 +468,7 @@ ccount2
 #### Figure 4A
 
 {
+  source("src/functions.R")
   sample.var <- c("strain","time","stain","tripl")
   fcsset3A<-flowCreateFlowSet(filepath = "data/f3/set8/",
                           sample_variables=sample.var,transformation = TRUE)
@@ -431,6 +481,12 @@ ccount2
 df3A<-fcsset3AG%>%
   flowFcsToDf()
 }
+# str(df3A)
+# ttest<-df3A%>%
+#   group_by(strain,time,stain, tripl)%>%
+#   summarize(n=n())
+# 
+# table(ttest$stain)
 
 {
   ## Use kmeans to identify subsets
@@ -440,10 +496,13 @@ df3A<-fcsset3AG%>%
   Bs2020.reference<-ref.ds(strn="Bs02020",tim="56h",stn="1",df=df3A)
   
   set.seed(1)
-  Bs2003.kmeans<-kmeans.rep(Bs2003.reference,rep = 1000)
-  Bs2018.kmeans<-kmeans.rep(Bs2018.reference,rep = 1000)
-  Bs2020.kmeans<-kmeans.rep(Bs2020.reference,rep = 1000)
+  Bs2003.kmeans <- kmeans(x = Bs2003.reference,centers = 3,nstart = 1000)
+  Bs2018.kmeans <- kmeans(x = Bs2018.reference,centers = 3,nstart = 1000)
+  Bs2020.kmeans <- kmeans(x = Bs2020.reference,centers = 3,nstart = 1000)
   
+  # Bs2003.kmeans<-kmeans.rep(Bs2003.reference,rep = 1000)
+  # Bs2018.kmeans<-kmeans.rep(Bs2018.reference,rep = 1000)
+  # Bs2020.kmeans<-kmeans.rep(Bs2020.reference,rep = 1000)
 }
 
 #Supplemental 
@@ -473,13 +532,25 @@ data.frame(Bs2020.reference,cluster=Bs2020.kmeans$cluster)%>%
     select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,stain,time)%>%
     split(.$strain)
   
-  cluster.pred.A<-base::Map(function(x,y) {
-    cbind(x,cluster=predict.clusters2(x[,c(-4,-5,-6)],y))%>%
-      as.data.frame()
-  },
-  df3A.list,centers.list)%>%
-    do.call(rbind,.)
+  cluster.pred.A<-rbind(
+    kmeans.predict(model.kmeans = Bs2003.kmeans,newdata = df3A.list[["Bs02003"]]),
+    kmeans.predict(model.kmeans = Bs2018.kmeans,newdata = df3A.list[["Bs02018"]]),
+    kmeans.predict(model.kmeans = Bs2018.kmeans,newdata = df3A.list[["Bs02020"]])
+  )
   
+  # 
+  # names(df3A.list)
+  # 
+  # cluster.pred.A<-base::Map(function(x,y) {
+  #  cbind(x,cluster=clue::cl_predict(newdata=x[,c(-4,-5,-6)],y))%>%
+  #    as.data.frame()},df3A.list,centers.list)%>%
+  #  do.call(rbind,.)
+  # 
+  # cluster.pred.A<-base::Map(function(x,y) {
+  #   cbind(x,cluster=predict.clusters2(x[,c(-4,-5,-6)],y))%>%
+  #     as.data.frame()},df3A.list,centers.list)%>%
+  #   do.call(rbind,.)
+  # 
 }
 
 #Supplemental
@@ -515,19 +586,25 @@ lapply(1,function(x) {
       scale_fill_viridis()
   })
 
+table(c.count.A$strain,c.count.A$time,c.count.A$cluster)
+
+table(c.count.A$cluster)
+
 {
   c.count.A<-cluster.pred.A%>%
     group_by(strain,time,cluster,stain)%>%
     summarize(count=n())%>%
-    ungroup()%>%
-    group_by(strain,time,cluster)%>%
-    summarize(mean.count=mean(count),sd.count=sd(count))%>%
-    ungroup()%>%
-    group_by(strain,time)%>%
-    mutate(perc.mean.count=100*mean.count/sum(mean.count),perc.sd.count=100*sd.count/sum(mean.count))%>%
+    ungroup()
+    # group_by(strain,time,cluster)%>%
+    # summarize(mean.count=mean(count),sd.count=sd(count))%>%
+    # ungroup()%>%
+    # group_by(strain,time)%>%
+    # mutate(perc.mean.count=100*mean.count/sum(mean.count),perc.sd.count=100*sd.count/sum(mean.count))%>%
     separate(time,c("time","h"),2)%>%
     mutate(time=as.numeric(time))%>%
-    ungroup()%>%
+    group_by(strain,time,stain)%>%
+    mutate(perc.mean.count=100*count/sum(count))%>%
+    #ungroup()%>%
     #switching group names
     mutate(cluster=replace(cluster,cluster==2&strain=="Bs02018",4),
            cluster=replace(cluster,cluster==2&strain=="Bs02020",4))%>%
@@ -540,11 +617,12 @@ lapply(1,function(x) {
   c.count.A%>%write.csv(file = "suppl/population_count.csv")
   
   ccount1<-c.count.A%>%
-    ggplot(aes(as.factor(time),perc.mean.count))+
+    ggplot(aes(as.factor(time),perc.mean.count,fill=factor(cluster,levels=c(3,1,2))))+
     #geom_line(size=1,position=position_dodge(),stat="identity",aes(color=as.factor(cluster)))+
-    geom_bar(size=1,position=position_dodge(),stat="identity",aes(fill=as.factor(cluster)))+
-    geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
-                      group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
+    geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
+    # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
+    #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
+    #stat_summary(fun.y = "mean",geom = "line")+
     ylab("Proportion / %")+xlab("time / h")+
     scale_y_continuous(expand = c(0,0))+
     facet_grid(strain~.)+
@@ -563,13 +641,12 @@ ggsave("fig/f4_applications.pdf",width = 8, height = 5)
 
 #### Supplemental: Combinations ####
 
-remove(list=ls())
+{
+  remove(list=ls())
+  source("src/functions.R")
+  sample.var=c("ident","type","stain","conc","trash")
+  fcsset5<-flowCreateFlowSet(filepath = "data/reg/",sample_variables=sample.var)
 
-#GET: mka spores sepration 4 > combination stains!
-source("src/functions.R")
-
-sample.var=c("ident","type","stain","conc","trash")
-fcsset5<-flowCreateFlowSet(filepath = "data/reg/",sample_variables=sample.var)
 
 #Gating
 fcsset5g<-fcsset5%>%
@@ -577,6 +654,8 @@ fcsset5g<-fcsset5%>%
   Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))
 
 fcs.df1<-flowFcsToDf(fcsset5g)
+
+}
 
 fcs.df1%>%
   select(type,stain,conc,asinh.FL1.A,asinh.FL3.A)%>%
