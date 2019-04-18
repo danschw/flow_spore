@@ -2,20 +2,16 @@ source("src/functions.R")
 
 #### Figure 1 - Separation of Cells vs Spores possible, overview plot ####
 {
-  #loading
+  #sample variables
   sample.var<-c("strain","ident","stain","mode","run")
-  fcsset1<-flowCreateFlowSet(filepath = "data/f1/",sample_variables =sample.var)
   
-  #gating
-  fcsset1.g<-fcsset1%>%
+  df1<-flowCreateFlowSet(filepath = "data/f1/",sample_variables =sample.var)%>%
     Subset(.,norm2Filter("asinh.FSC.H", "asinh.FSC.W",filterId="norm_ssc.fsc",scale=1))%>%
-    Subset(.,norm2Filter("asinh.SSC.H", "asinh.SSC.W",filterId="norm_ssc.fsc",scale=1))
-  
-  df1<-flowFcsToDf(fcsset1.g)
+    Subset(.,norm2Filter("asinh.SSC.H", "asinh.SSC.W",filterId="norm_ssc.fsc",scale=1))%>%
+    flowFcsToDf(.)
 }
 
 {
-#SSC-Plot
 SSC.plot<-df1%>%
   dplyr::filter(mode=="SSC")%>%
   select(asinh.SSC.A,ident,stain)%>% #,run
@@ -26,9 +22,6 @@ SSC.plot<-df1%>%
   guides(fill=FALSE)+theme(legend.position = c(.05,.9))+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,name="",direction = -1)
 
-SSC.plot
-
-#FSC-Plot
 FSC.plot<-df1%>%
   dplyr::filter(mode=="FSC")%>%
   select(asinh.FSC.A,ident,stain,run)%>%
@@ -37,9 +30,7 @@ FSC.plot<-df1%>%
   ylab("")+
   guides(fill=FALSE)+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)
-FSC.plot
 
-#pi
 PI.plot<-df1%>%
   dplyr::filter(mode=="PI")%>%
   select(asinh.FL3.A,ident,stain,run)%>%
@@ -49,11 +40,12 @@ PI.plot<-df1%>%
   guides(fill=FALSE)+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)+
   xlim(c(5,12))+
-  ylab("")
+  ylab("")+
+  annotate(geom = "segment", x = 9, xend = 8.6, y = 0.3, yend = 0.1,
+           arrow=arrow(),colour = "red",alpha=0.7,size=1)
 
 PI.plot
 
-#sybr1
 S1.plot<-df1%>%
   dplyr::filter(mode=="SYBR1")%>%
   select(asinh.FL1.A,ident,stain,run)%>%
@@ -62,9 +54,7 @@ S1.plot<-df1%>%
   guides(fill=FALSE)+
   ylab("norm. count")+xlim(c(5,14))+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)
-S1.plot
 
-#sybr2
 S2.plot<-df1%>%
   dplyr::filter(mode=="SYBR2")%>%
   select(asinh.FL1.A,ident,stain,run)%>%
@@ -73,9 +63,7 @@ S2.plot<-df1%>%
   guides(fill=FALSE)+
   ylab("norm. count")+xlim(c(5,14))+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)
-S2.plot
 
-# legend Plot
 legend.plot<-df1%>%
   select(asinh.FL1.A,ident,stain,run)%>%
   ggplot(aes(asinh.FL1.A))+geom_density(aes(fill=ident),alpha=0.4)+
@@ -93,11 +81,8 @@ legend.plot<-df1%>%
   annotate(geom="text", x=-10, y=25, parse=TRUE,label = "bold('E')~SYBR2~stain",hjust=0,size=4)+
   geom_rect(aes(xmin = -10, xmax = 100, ymin = 0, ymax = 1),color = "white", size = 2, fill = "white")
 
-
-legend.plot
-}
-
 plot_grid(SSC.plot,FSC.plot,PI.plot,S1.plot,S2.plot,legend.plot,ncol = 3,labels = "AUTO")
+}
 
 ggsave("fig/Figure_1.pdf",width = 9, height = 5,units = "in",dpi=300)
 
@@ -421,30 +406,6 @@ ccount2
     flowFcsToDf()%>%
     dplyr::filter(stain!="unstained")
   
-  #df3A<-df3A[df3A$stain!="unstained",]
-
-  #selecting reference 
-  # Bs2003.reference<-ref.ds(strn="Bs02003",tim="48h",stn="2",df=df3A)
-  # Bs2018.reference<-ref.ds(strn="Bs02018",tim="56h",stn="2",df=df3A)
-  # Bs2020.reference<-ref.ds(strn="Bs02020",tim="56h",stn="1",df=df3A)
-  # 
-  # set.seed(1)
-  # Bs2003.mix<-mclust::Mclust(data = Bs2003.reference,G = 3)
-  # Bs2018.mix<-mclust::Mclust(data = Bs2018.reference,G = 3)
-  # # Bs2020.mix<-mclust::Mclust(data = Bs2020.reference,G = 3)
-  # 
-  # data.frame(Bs2003.reference)%>%
-  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  #   geom_hex(aes(fill=log(..count..)),bins=300)
-  # 
-  # data.frame(Bs2018.reference)%>%
-  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  #   geom_hex(aes(fill=log(..count..)),bins=300)
-  # 
-  # data.frame(Bs2020.reference)%>%
-  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  #   geom_hex(aes(fill=log(..count..)),bins=300)
-  
 }
 
   ###splitting and applying gmm
@@ -556,15 +517,11 @@ ggsave("fig/Figure_4.pdf",width = 8, height = 5)
   remove(list=ls())
   source("src/functions.R")
   sample.var=c("ident","type","stain","conc","trash")
-  fcsset5<-flowCreateFlowSet(filepath = "data/reg/",sample_variables=sample.var)
+  fcs.df1<-flowCreateFlowSet(filepath = "data/reg/",sample_variables=sample.var)%>%
+    Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=1))%>%
+    Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))%>%
+    flowFcsToDf(.)
 
-#Gating
-fcsset5g<-fcsset5%>%
-  Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=1))%>%
-  Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))
-
-fcs.df1<-flowFcsToDf(fcsset5g)
-}
 
 fcs.df1%>%
   select(type,stain,conc,asinh.FL1.A,asinh.FL3.A)%>%
@@ -601,4 +558,5 @@ fcs.df2%>%
   lm(as.numeric(mean.fl3)~-1+as.numeric(SYBR2)*as.numeric(PI),data=.)%>%
   summary()
 
-write.csv2(fcs.df3,"suppl/mixdesign.csv")
+write.csv2(fcs.df2,"suppl/mixdesign.csv")
+}
