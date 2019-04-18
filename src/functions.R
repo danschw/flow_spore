@@ -10,6 +10,8 @@ library(cowplot)
 library(ggridges)
 library(mixtools)
 library(clue)
+library(mclust) #for GMM clustering
+
 
 if(!require(dsHelper)){
   devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")  
@@ -75,7 +77,6 @@ library(dsHelper)
       dplyr::filter(channel==inp.channel)%>%
       with(value)
     
-    #
     res <- base::split(dist1, dist1 > popsep) %>%
       sapply(mean)
     
@@ -98,18 +99,53 @@ library(dsHelper)
   }
 
 #### K-means ####
-
 #Getting reference matrix
-ref.ds<-function(strn="Bs02018",tim="48h",stn="1",df=df3A){
-  df%>%
-    #dplyr::filter(!stain=="unstained")%>%
-    dplyr::filter(strain==strn)%>%
-    dplyr::filter(time==tim)%>%
-    dplyr::filter(stain==stn)%>%
-    dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
-    as.matrix()
+ref.ds<-function(strn="Bs02003",time="24h",tripl=NA,stn=NA,df=NA){
+  if(is.na(stn)){
+    df%>%
+      dplyr::filter(strain==strn)%>%
+      dplyr::filter(tripl==tripl)%>%
+      dplyr::filter(time==time)%>%
+      dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+      as.matrix()
+           }else{
+     df%>%
+             dplyr::filter(strain==strn)%>%
+             dplyr::filter(time==time)%>%
+             dplyr::filter(stain==stn)%>%
+             dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+             as.matrix()
+         }
 }
 
+#
+
+  kmeans.predict<-function(model.kmeans,newdata){
+    clusterB.pred<-lapply(newdata,function(x) {
+      set.seed(1)
+      
+      cbind(x,cl_predict(newdata = x[,c(-4,-5,-6)],object = model.kmeans)%>%as.factor())})%>%
+      do.call(rbind,.)
+    
+    colnames(clusterB.pred)[7]<-"cluster"
+    
+    clusterB.pred
+  }
+    
+
+  kmeans.predict<-function(model.kmeans,newdata){
+      set.seed(1)
+      
+    clusterB.pred<-cbind(newdata,
+                         cluster=cl_predict(newdata = newdata[,c(-4,-5,-6)],object = model.kmeans)
+                         %>%as.factor())
+      #do.call(rbind,.)
+    
+    #colnames(clusterB.pred)[7]<-"cluster"
+    
+    as_tibble(clusterB.pred)
+  }
+    
 #prediction function from package CLUE
 predict.clusters2<-function (A, B, method = c("euclidean", "manhattan", "minkowski"),
                              ...) {

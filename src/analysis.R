@@ -379,78 +379,6 @@ clusterB.pred%>%
 ggsave("suppl/Supplemental_4.pdf",width = 4, height = 6)
 #ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
 
-
-
-
-
-
-
-
-
-
-
-
-
-# 
-# 
-#   #Get reference centers from suitable sample
-# {
-#   df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3)  
-#   #finding centers with random starting points, 1000 repetitions
-#   set.seed(1)
-#   #Appl.kmeans <- kmeans.rep(df3.ref,rep = 1000)
-#   Appl.kmeans <- kmeans(x = df3.ref,centers = 3,nstart = 1000)
-#   
-#   #center positions
-#   centers.list.df<-as.data.frame(Appl.kmeans$centers)
-# 
-#   }
-# #Figure 3A
-# 
-# clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
-#   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
-#   geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
-#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-#   xlim(c(10,15))+ylim(c(2.5,15))+
-#   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-#                      guide = FALSE)+
-#   scale_alpha_continuous(guide = FALSE)+
-#   theme_bw()+
-#   geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="red",size=1)+
-#   geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="red",size=1)+
-#   geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="red",size=1)
-# 
-# clplot1
-# 
-# clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
-#   ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
-#   geom_hex(aes(fill=as.factor(cluster)),bins=300)+
-#   geom_density2d(col="red",bins=20,size=0.5,alpha=0.2)+
-#   xlim(c(10,15))+ylim(c(9,12))+
-#   scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-#                      guide=FALSE)+
-#   scale_alpha_continuous(guide = FALSE)+
-#   theme_bw()+
-#   geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="red",size=1)+
-#   geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="red",size=1)+
-#   geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="red",size=1)
-# 
-# clplot2
-# 
-# plot_grid(clplot1,clplot2,align = "h")
-# ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
-# 
-# 
-# 
-# 
-# 
-
-
-
-
-
-
 # FIGURE 4B
 {
 c.count.B<-clusterB.pred%>%
@@ -593,22 +521,12 @@ lapply(1,function(x) {
     mutate(perc.count=100*count/sum(count))
   
   table(c.count.A$strain,c.count.A$time,c.count.A$cluster,c.count.A$stain)
-  
-    #ungroup()%>%
-    #switching group names
-    # mutate(cluster=replace(cluster,cluster==2&strain=="Bs02018",4),
-    #        cluster=replace(cluster,cluster==2&strain=="Bs02020",4))%>%
-    # mutate(cluster=replace(cluster,cluster==3&strain=="Bs02018",2),
-    #        cluster=replace(cluster,cluster==1&strain=="Bs02020",2))%>%
-    # mutate(cluster=replace(cluster,cluster==4&strain=="Bs02018",3),
-    #        cluster=replace(cluster,cluster==3&strain=="Bs02020",1))%>%
-    # mutate(cluster=replace(cluster,cluster==4&strain=="Bs02020",3))
-  
+
   c.count.A%>%write.csv(file = "suppl/population_count.csv")
   
 ccount1<-c.count.A%>%
     ggplot(aes(time,perc.count))+
-     geom_point(aes(col=as.factor(cluster),group=time),
+     geom_point(aes(col=as.factor(cluster),shape=as.factor(cluster),group=time),
                 size=2)+
      stat_summary(aes(col=as.factor(cluster)),
                 fun.y = "mean",geom = "line",size=2)+
@@ -630,10 +548,7 @@ ccount1<-c.count.A%>%
 
 plot_grid(ccount1,ccount2,nrow = 1,rel_widths = c(0.6,0.4),labels = c("A","B"))
 
-ggsave("fig/f4_applications.pdf",width = 8, height = 5)
-
-))}}
-
+ggsave("fig/Figure_4.pdf",width = 8, height = 5)
 
 #### Supplemental: Combinations ####
 
@@ -649,7 +564,6 @@ fcsset5g<-fcsset5%>%
   Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))
 
 fcs.df1<-flowFcsToDf(fcsset5g)
-
 }
 
 fcs.df1%>%
@@ -661,7 +575,7 @@ fcs.df1%>%
   theme(legend.position = c(0.45, 0.97))+
   facet_grid(.~channel)
 
-ggsave("suppl/ps2.pdf",width = 10, height = 10)
+ggsave("suppl/Supplemental_2.pdf",width = 10, height = 10)
 
 fcs.df2<-fcs.df1%>%
   group_by(type,stain,conc)%>%
@@ -670,13 +584,6 @@ fcs.df2<-fcs.df1%>%
   mutate(PI=   c(0,2,1,1,0,0,0,0,2,1,1,0,0,0),
          SYBR1=c(0,0,1,0,2,1,0,0,0,1,0,2,1,0),
          SYBR2=c(0,0,0,1,0,1,2,0,0,0,1,0,1,2))
-
-fcs.df2%>%
-  ggplot(aes(as.numeric(mean.fl1),as.numeric(mean.fl3)))+
-  geom_point()
-  geom_point(aes(col=interaction(PI),shape=as.factor(SYBR2)))+
-  geom_line(aes(col=SYBR1),stat="summary",fun.y=mean)+
-  facet_grid(PI~.)
 
 fcs.df2%>%
   dplyr::filter(PI==0)%>%
