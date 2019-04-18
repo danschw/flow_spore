@@ -304,23 +304,15 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
 }
 
 {
-  #Load reference with all populations
+  #Load reference containing all subpopulations
   df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3) 
   set.seed(1)
   df3.mix<-mclust::Mclust(data = df3.ref,G = 3)
-
-  #plot(df3.mix,what = "density")
-  #summary(df3.mix)
   
   #getting centers for visualization and export
   centers.list.df<-t(df3.mix$parameters$mean)
   write.csv(centers.list.df,"suppl/centers_f3.csv")
-  center.locs<-factor(df3.mix$classification,levels=c(2,1,3))
-  
-  # predict(df3.mix)
-  # library(factoextra)
-  # fviz_mclust(df3.mix,what = "classification",geom="point")
-  
+  center.locs<-factor(df3.mix$classification,levels=c(1,2,3))
 }
 
 clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
@@ -347,9 +339,9 @@ clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
                      guide=FALSE)+
   scale_alpha_continuous(guide = FALSE)+
   theme_bw()+
-  geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="red",size=1)+
-  geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="red",size=1)+
-  geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="red",size=1)
+  geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="blue",size=1)+
+  geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="blue",size=1)+
+  geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="blue",size=1)
 
 clplot2
 
@@ -377,8 +369,8 @@ ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
 #supplemental 4
 clusterB.pred%>%
   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  #geom_hex(bins=200)+
-  geom_hex(aes(col=as.factor(cluster)),bins=200,alpha=0.3)+
+  geom_hex(bins=200)+
+  #geom_hex(aes(col=as.factor(cluster)),bins=50)+
   facet_grid(tripl~strain)+
   xlim(c(10,15))+ylim(c(2.5,14))+
   scale_fill_viridis(guide=FALSE)+
@@ -511,90 +503,22 @@ ccount2
   # set.seed(1)
   # Bs2003.mix<-mclust::Mclust(data = Bs2003.reference,G = 3)
   # Bs2018.mix<-mclust::Mclust(data = Bs2018.reference,G = 3)
-  # Bs2020.mix<-mclust::Mclust(data = Bs2020.reference,G = 3)
-  
-  data.frame(Bs2003.reference)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)
-
-  data.frame(Bs2018.reference)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)
-
-  data.frame(Bs2020.reference)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)
+  # # Bs2020.mix<-mclust::Mclust(data = Bs2020.reference,G = 3)
+  # 
+  # data.frame(Bs2003.reference)%>%
+  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+  #   geom_hex(aes(fill=log(..count..)),bins=300)
+  # 
+  # data.frame(Bs2018.reference)%>%
+  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+  #   geom_hex(aes(fill=log(..count..)),bins=300)
+  # 
+  # data.frame(Bs2020.reference)%>%
+  #   ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+  #   geom_hex(aes(fill=log(..count..)),bins=300)
   
 }
 
-#Supplemental 
-
-p11<-data.frame(Bs2003.reference)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..)),bins=300)
-
-p12<-data.frame(Bs2003.reference,cluster=predict(df3.mix,Bs2003.reference)$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-p13<-data.frame(Bs2003.reference,cluster=Bs2003.mix$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-plot_grid(p11,p12,p13)
-
-p21<-data.frame(Bs2018.reference)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..)),bins=300)
-
-p22<-data.frame(Bs2018.reference,cluster=predict(df3.mix,Bs2018.reference)$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-p23<-data.frame(Bs2018.reference,cluster=Bs2018.mix$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-plot_grid(p21,p22,p23)
-
-p31<-data.frame(Bs2020.reference)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..)),bins=300)
-
-p32<-data.frame(Bs2020.reference,cluster=predict(df3.mix,Bs2020.reference)$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-p33<-data.frame(Bs2020.reference,cluster=Bs2020.mix$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-plot_grid(p31,p32,p33)
-
-data.frame(Bs2018.reference,cluster=predict(df3.mix,Bs2018.reference)$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-data.frame(Bs2020.reference,cluster=predict(df3.mix,Bs2020.reference)$classification)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=log(..count..),col=as.factor(cluster)),bins=300)
-
-
-data.frame(Bs2003.reference,cluster=Bs2003.mix$classification)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)
-    #facet_grid(.~cluster)
-  
-data.frame(Bs2018.reference,cluster=Bs2018.mix$classification)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)+
-    facet_grid(.~cluster)+xlim(c(10,15))+ylim(c(2.5,15))
-  
-data.frame(Bs2020.reference,cluster=Bs2020.kmeans$classification)%>%
-    ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-    geom_hex(aes(fill=log(..count..)),bins=300)+
-    facet_grid(.~cluster)+xlim(c(10,15))+ylim(c(2.5,15))
-  
   ###splitting and applying gmm
 {
   centers.list<-list(df3.mix$classification,
