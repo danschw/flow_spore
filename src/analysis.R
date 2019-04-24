@@ -94,19 +94,111 @@ ggsave("fig/Figure_1.pdf",width = 9, height = 5,units = "in",dpi=300)
   
   sample.var=c("ident","type","stain","t1","t2","t3","time") 
   fcsset2.1<-flowCreateFlowSet(filepath = "data/f2/set5_cells+spores_30/",
-                               sample_variables=sample.var,additional_variable = 30,transformation = TRUE)
+                               sample_variables=sample.var,
+                               additional_variable = 30,transformation = TRUE)
   fcsset2.2<-flowCreateFlowSet(filepath = "data/f2/set5_cells+spores_90/",
-                               sample_variables =sample.var,additional_variable = 90,transformation = TRUE)
+                               sample_variables =sample.var,
+                               additional_variable = 90,transformation = TRUE)
 
-  df2<-fcsset2.5<-rbind2(fcsset2.1,fcsset2.2)%>%
-  Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=5))%>%
-  flowFcsToDf(.)%>%
-  dplyr::filter(ident=="Cells+spores")%>%
-  select(type,stain,time,asinh.FL1.A,asinh.FL3.A,asinh.FSC.A,asinh.SSC.A)%>%
-  gather("channel","value",4:7)
+  df2<-rbind2(fcsset2.1,fcsset2.2)%>%
+    Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=5))%>%
+    flowFcsToDf(.)%>%
+    dplyr::filter(ident=="Cells+spores")%>%
+    select(type,stain,time,asinh.FL1.A,asinh.FL3.A,asinh.FSC.A,asinh.SSC.A)%>%
+    gather("channel","value",4:7)
 }
 
+#combinations of stain, channel, concentration and time to examine
+cases<-data.frame(type=rep(c(rep("PI",3),rep("SYBR1",3),rep("SYBR2",3),rep("unstained",2)),2),
+                  stain=c(rep(c(1,2,4),3),0,0),
+                  time=c(rep(30,11),rep(90,11)),
+                  channel=rep(c(rep("asinh.FL3.A",3),rep("asinh.FL1.A",6),"asinh.FSC.A","asinh.SSC.A"),2))%>%
+  unite(data = .,sep = ".",col = "merge")%>%
+  with(merge)
+
+t2<-split(x = df2,interaction(df2$type,df2$stain,df2$time,df2$channel))%>%
+  Filter(function(x) nrow(x)!=0,.)%>%
+  lapply(.,function(x) {
+    x%>%
+    dplyr::filter(value>5)%>%
+      with(value)%>%
+      Mclust(.,2)      
+  });beep()
+
+t3<-t2[names(t2) %in% cases]
+
+plot.list<-Map(function(x){
+  ggplot()+
+    geom_density(aes(x = x$data))+
+    geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
+    stat_function(aes(x$data),fun = sdnorm, n = 999,
+                  args = list(mean = x$parameters$mean[1],
+                              sd = sqrt(x$parameters$variance$sigmasq[1]),
+                              lambda =x$parameters$pro[1]),
+                  col="#F8766D",linetype="dashed")+
+    stat_function(aes(x$data),fun = sdnorm, n = 999,
+                  args = list(mean = x$parameters$mean[2],
+                              sd = sqrt(x$parameters$variance$sigmasq[2]),
+                              lambda =x$parameters$pro[2]),
+                  col="#00BFC4",linetype="dashed")+
+    #xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
+    #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
+    scale_color_discrete(guide=FALSE)+
+    theme(axis.text.y=element_blank(),
+          axis.text.x = element_text(size=10),
+          axis.title.x = element_text(size=10))
+},t3)
+
+
+do.call(plot_grid,c(plot.list,ncol = 4))
+
+
+ggplot()+
+  geom_density(aes(x = x$data))+
+  geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
+  stat_function(aes(x$data),fun = sdnorm, n = 999,
+                args = list(mean = x$parameters$mean[1],
+                            sd = sqrt(x$parameters$variance$sigmasq[1]),
+                            lambda =x$parameters$pro[1]),
+                col="#F8766D",linetype="dashed")+
+  stat_function(aes(x$data),fun = sdnorm, n = 999,
+                args = list(mean = x$parameters$mean[2],
+                            sd = sqrt(x$parameters$variance$sigmasq[2]),
+                            lambda =x$parameters$pro[2]),
+                col="#00BFC4",linetype="dashed")+
+  #xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
+  #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
+  scale_color_discrete(guide=FALSE)+
+  theme(axis.text.y=element_blank(),
+        axis.text.x = element_text(size=10),
+        axis.title.x = element_text(size=10))
+
+x$parameters$pro
+
+  x$parameters$mean
+  geom_vline(aes_string(xintercept=cutoffs.list[i]),col="red")+ylab("")
+
+  ?Mclust
+  
+function(inp.df,inp.type,inp.stain,inp.time,inp.channel,cutoff=5,lowPop=5,highPop=13){
+  
+  inp.df%>%
+    dplyr::filter(type==inp.type,
+                  stain==inp.stain,
+                  time==inp.time)%>%
+    dplyr::filter(channel==inp.channel)%>%
+    dplyr::filter(value>cutoff)%>%
+    with(value)%>%
+    normalmixEM(lambda = .5, mu = c(lowPop, highPop),k = 2, sigma = 0.3)%>%
+    return
+  
+}
+t2[names(t2) %in% cases]
 {
+  
+
+  
+  ))}}
 #selected cases and set starting points for EMM depending on channel
 cases1<-data.frame(
   type=c("PI","PI","PI","SYBR1","SYBR1","SYBR1","SYBR2","SYBR2","SYBR2","unstained","unstained"),
@@ -117,7 +209,12 @@ cases1<-data.frame(
   lowPop=c(5,5,5,5,5,5,5,5,5,5,10),
   highPop=c(14,14,14,14,14,14,14,14,14,14,14)
   )
-
+  
+  cases1%>%
+  unite(data = .,sep = ".",col = "merge")
+  
+  apply(FUN = function(x) do.call("paste0",x),MARGIN = 1,X = cases1)
+  
 cases<-rbind(cases1,cases1[1:9,])
 cases$time[12:20]<-90
 cases$lowPop[14]<-10;cases$highPop[14]<-12

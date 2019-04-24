@@ -12,8 +12,8 @@ library(ggridges)
 library(mclust) #for GMM clustering
 library(beepr) #sounds
 
-library(mixtools)
-library(clue)
+# library(mixtools)
+# library(clue)
 
 if(!require(dsHelper)){
   devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")  
@@ -24,6 +24,9 @@ library(dsHelper)
 #~~~~~~~~~~~~~#
 ###Functions###
 #~~~~~~~~~~~~~#
+
+#Normal with mixing component
+sdnorm <- function(x, mean=0, sd=1, lambda=1){lambda*dnorm(x, mean=mean, sd=sd)}
 
 #Getting reference matrix
 ref.ds<-function(strn="Bs02003",time="24h",tripl=NA,stn=NA,df=NA){
