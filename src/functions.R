@@ -2,16 +2,18 @@
 ###Packages###
 #~~~~~~~~~~~~#
 
-library(tidyverse)
-library(viridis)
 library(flowCore)
-library(ggcyto)
+library(tidyverse)
+library(viridis) #color palette
+library(ggcyto) #visualization
 library(cowplot)
 library(ggridges)
+
+library(mclust) #for GMM clustering
+library(beepr) #sounds
+
 library(mixtools)
 library(clue)
-library(mclust) #for GMM clustering
-
 
 if(!require(dsHelper)){
   devtools::install_git("https://gitlab.com/drsudo/drsudo_helper.git")  
@@ -22,6 +24,27 @@ library(dsHelper)
 #~~~~~~~~~~~~~#
 ###Functions###
 #~~~~~~~~~~~~~#
+
+#Getting reference matrix
+ref.ds<-function(strn="Bs02003",time="24h",tripl=NA,stn=NA,df=NA){
+  if(is.na(stn)){
+    df%>%
+      dplyr::filter(strain==strn)%>%
+      dplyr::filter(tripl==tripl)%>%
+      dplyr::filter(time==time)%>%
+      dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+      as.matrix()
+  }else{
+    df%>%
+      dplyr::filter(strain==strn)%>%
+      dplyr::filter(time==time)%>%
+      dplyr::filter(stain==stn)%>%
+      dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A)%>%
+      as.matrix()
+  }
+}
+
+
 
 #### GMM ####
 

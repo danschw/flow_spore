@@ -40,10 +40,10 @@ PI.plot<-df1%>%
   guides(fill=FALSE)+
   scale_fill_viridis(discrete = TRUE,alpha=0.7,begin = 0,end = 0.8,direction = -1)+
   xlim(c(5,12))+
-  ylab("")+
-  annotate(geom = "segment", x = 9, xend = 8.6, y = 0.3, yend = 0.1,
-           arrow=arrow(),colour = "red",alpha=0.7,size=1)
-
+  # annotate(geom = "segment", x = 9, xend = 8.6, y = 0.3, yend = 0.1,
+  #          arrow=arrow(),colour = "red",alpha=0.7,size=1)+
+  ylab("")
+ 
 PI.plot
 
 S1.plot<-df1%>%
@@ -97,14 +97,14 @@ ggsave("fig/Figure_1.pdf",width = 9, height = 5,units = "in",dpi=300)
                                sample_variables=sample.var,additional_variable = 30,transformation = TRUE)
   fcsset2.2<-flowCreateFlowSet(filepath = "data/f2/set5_cells+spores_90/",
                                sample_variables =sample.var,additional_variable = 90,transformation = TRUE)
-}
 
-df2<-fcsset2.5<-rbind2(fcsset2.1,fcsset2.2)%>%
+  df2<-fcsset2.5<-rbind2(fcsset2.1,fcsset2.2)%>%
   Subset(.,norm2Filter("FSC-H", "FSC-W",filterId="norm_ssc.fsc",scale=5))%>%
   flowFcsToDf(.)%>%
   dplyr::filter(ident=="Cells+spores")%>%
   select(type,stain,time,asinh.FL1.A,asinh.FL3.A,asinh.FSC.A,asinh.SSC.A)%>%
   gather("channel","value",4:7)
+}
 
 {
 #selected cases and set starting points for EMM depending on channel
@@ -286,9 +286,7 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
     Subset(norm2Filter("asinh.FSC.H","asinh.FSC.W",scale.factor = 2))%>%
     Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))%>%
     flowFcsToDf(.)
-}
-
-{
+  
   #Load reference containing all subpopulations
   df3.ref<-ref.ds(strn="Bs02003",time="24h",tripl=2,df=df3) 
   set.seed(1)
@@ -298,43 +296,9 @@ ggsave("fig/Figure_2.pdf",width = 10, height = 5)
   centers.list.df<-t(df3.mix$parameters$mean)
   write.csv(centers.list.df,"suppl/centers_f3.csv")
   center.locs<-factor(df3.mix$classification,levels=c(1,2,3))
-}
-
-clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
-  ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-  geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
-  geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-  xlim(c(10,15))+ylim(c(2.5,15))+
-  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-                     guide = FALSE)+
-  scale_alpha_continuous(guide = FALSE)+
-  theme_bw()+
-  geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="blue",size=1)+
-  geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="blue",size=1)+
-  geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="blue",size=1)
-
-clplot1
-
-clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
-  ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
-  geom_hex(aes(fill=as.factor(cluster)),bins=300)+
-  geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-  xlim(c(10,15))+ylim(c(9,12))+
-  scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-                     guide=FALSE)+
-  scale_alpha_continuous(guide = FALSE)+
-  theme_bw()+
-  geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="blue",size=1)+
-  geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="blue",size=1)+
-  geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="blue",size=1)
-
-clplot2
-
-plot_grid(clplot1,clplot2,align = "h")
-ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
 
 # Prediction for other cases
-{
+
   df3.list<-df3%>%dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.FL1.A,strain,time,tripl)%>%
     split(.,df3$strain)
   
@@ -349,7 +313,7 @@ ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
   )
   
   clusterB.pred<-cbind(clusterB.annot,cluster=clusterB.predict)
-}
+
 
 #supplemental 4
 clusterB.pred%>%
@@ -361,9 +325,9 @@ clusterB.pred%>%
   scale_fill_viridis(guide=FALSE)+
   theme_bw()
 
-ggsave("suppl/Supplemental_4.pdf",width = 4, height = 6)
+  ggsave("suppl/Supplemental_4.pdf",width = 4, height = 6);beep()
 #ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
-
+}
 # FIGURE 4B
 {
 c.count.B<-clusterB.pred%>%
@@ -374,22 +338,24 @@ c.count.B<-clusterB.pred%>%
   mutate(perc.mean.count=100*count/sum(count))
 
   ccount2<-c.count.B%>%
-  ggplot(aes(strain,perc.mean.count,fill=factor(cluster,levels=c(1,3,2))))+
-  #geom_point(size=1,position=position_dodge(),stat="identity")+
-  geom_dotplot(binaxis="y",position=position_dodge(),stackdir = "center")+
+  ggplot(aes(strain,perc.mean.count,
+             col=factor(cluster,levels=c(2,1,3)),
+             shape=factor(cluster,levels=c(2,1,3))))+
+  geom_point(size=3,position=position_dodge(1),stat="identity")+
+  #geom_dotplot(col="white",binaxis="y",position=position_dodge(),stackdir = "center")+
   # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
   #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
   ylab("Proportion / %")+xlab("time / h")+
-  scale_y_continuous(expand = c(0,0))+
-  scale_fill_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
+  #scale_y_continuous(expand = c(0,0))+
+  scale_color_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
                      alpha = 0.8)+
+  scale_shape_discrete(labels=c("Cells","Forespores","Spores"))+
   theme_minimal()+
   theme(panel.spacing = unit(1, "lines"),legend.title=element_blank(),
         legend.position = c(0.20,0.9))+
   xlab("")
 
 ccount2
-
 }
 
 #### Figure 4A
@@ -405,11 +371,8 @@ ccount2
     Subset(rectangleGate("asinh.FL1.A"=c(0,15),"asinh.FL3.A"=c(0,15)))%>%
     flowFcsToDf()%>%
     dplyr::filter(stain!="unstained")
-  
-}
 
   ###splitting and applying gmm
-{
   centers.list<-list(df3.mix$classification,
                      df3.mix$classification,
                      df3.mix$classification)
@@ -500,16 +463,17 @@ ccount1<-c.count.A%>%
     facet_grid(strain~.)+
     scale_color_viridis(labels=c("Cells","Forespores","Spores"),discrete=TRUE,end = c(0.8),direction = -1,
                        guide=FALSE,alpha = 0.8)+
+    scale_shape_discrete(guide=FALSE)+
     theme_minimal()+
     theme(panel.spacing = unit(1, "lines"),legend.title=element_blank())+
     xlab("time / h")
   
   ccount1
-  }
+  plot_grid(ccount1,ccount2,nrow = 1,rel_widths = c(0.6,0.4),labels = c("A","B"))
 
-plot_grid(ccount1,ccount2,nrow = 1,rel_widths = c(0.6,0.4),labels = c("A","B"))
-
-ggsave("fig/Figure_4.pdf",width = 8, height = 5)
+  ggsave("fig/Figure_4.pdf",width = 8, height = 5);beep()
+  
+}
 
 #### Supplemental: Combinations ####
 
