@@ -114,7 +114,8 @@ cases<-data.frame(type=rep(c(rep("PI",3),rep("SYBR1",3),rep("SYBR2",3),rep("unst
                   time=c(rep(30,11),rep(90,11)),
                   channel=rep(c(rep("asinh.FL3.A",3),rep("asinh.FL1.A",6),"asinh.FSC.A","asinh.SSC.A"),2))%>%
   unite(data = .,sep = ".",col = "merge")%>%
-  with(merge)
+  with(merge)%>%
+  "["(-c(21,22)) #removing unstained at second time point, this was not measured
 
 t2<-split(x = df2,interaction(df2$type,df2$stain,df2$time,df2$channel))%>%
   Filter(function(x) nrow(x)!=0,.)%>%
@@ -127,10 +128,15 @@ t2<-split(x = df2,interaction(df2$type,df2$stain,df2$time,df2$channel))%>%
 
 t3<-t2[names(t2) %in% cases]
 
-plot.list<-Map(function(x){
+# If only one element exists in a vector, this element is returned. If it contains more than 2, the second element is returned.
+firstsecondElement<-function(x){
+  ifelse(is.na(x[2]),x[1],x[2])
+}
+
+plot.list<-Map(function(x,y){
   ggplot()+
     geom_density(aes(x = x$data))+
-    geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
+    # geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
     stat_function(aes(x$data),fun = sdnorm, n = 999,
                   args = list(mean = x$parameters$mean[1],
                               sd = sqrt(x$parameters$variance$sigmasq[1]),
@@ -138,21 +144,27 @@ plot.list<-Map(function(x){
                   col="#F8766D",linetype="dashed")+
     stat_function(aes(x$data),fun = sdnorm, n = 999,
                   args = list(mean = x$parameters$mean[2],
-                              sd = sqrt(x$parameters$variance$sigmasq[2]),
+                              sd = sqrt(firstsecondElement(x$parameters$variance$sigmasq)),
                               lambda =x$parameters$pro[2]),
                   col="#00BFC4",linetype="dashed")+
-    #xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
-    #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
     scale_color_discrete(guide=FALSE)+
     theme(axis.text.y=element_blank(),
-          axis.text.x = element_text(size=10),
-          axis.title.x = element_text(size=10))
-},t3)
+          axis.text.x = element_text(size=12),
+          axis.title.x = element_text(size=12))+
+    xlab(y)+
+    #xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
+    #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
+    ylab("")
+},t3,cases)
 
+plot.list[[6]]
 
 do.call(plot_grid,c(plot.list,ncol = 4))
+ggsave("suppl/Supplemental3.pdf",width=16,height = 24)
 
 
+x<-t3[[6]]
+x$parameters
 ggplot()+
   geom_density(aes(x = x$data))+
   geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
@@ -172,6 +184,10 @@ ggplot()+
   theme(axis.text.y=element_blank(),
         axis.text.x = element_text(size=10),
         axis.title.x = element_text(size=10))
+
+
+
+is.na(c(1)[2])
 
 x$parameters$pro
 
@@ -265,7 +281,6 @@ for (i in 1:length(models.list)){
 do.call(plot_grid,c(plot.list,ncol = 4))
 
 ggsave("suppl/Supplemental3.pdf",width=16,height = 24)
-ggsave("suppl/Supplemental3.png",width=16,height = 24)
 
 
 #get distribution parameters
