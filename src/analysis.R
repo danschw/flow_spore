@@ -340,7 +340,7 @@ figure_34 <- function() {
 
   clplot1 <- data.frame(df3.ref, cluster = center.locs) %>%
     ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
-    geom_hex(aes(fill = as.factor(cluster)), bins = 300) + # ,alpha=..ncount.. #order= ?
+    geom_hex(aes(fill = factor(cluster,levels=c(2,1,3))), bins = 300) + # ,alpha=..ncount.. #order= ?
     geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
     xlim(c(10, 15)) + ylim(c(2.5, 15)) +
     scale_fill_viridis(
@@ -355,7 +355,7 @@ figure_34 <- function() {
 
   clplot2 <- data.frame(df3.ref, cluster = center.locs) %>%
     ggplot(aes(x = asinh.SSC.A, y = asinh.FSC.A)) +
-    geom_hex(aes(fill = as.factor(cluster)), bins = 300) +
+    geom_hex(aes(fill = factor(cluster,levels=c(2,1,3))), bins = 300) +
     geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
     xlim(c(10, 15)) + ylim(c(9, 12)) +
     scale_fill_viridis(
@@ -396,11 +396,7 @@ figure_34 <- function() {
       shape = factor(cluster, levels = c(2, 1, 3))
     )) +
     geom_point(size = 3, position = position_dodge(1), stat = "identity") +
-    # geom_dotplot(col="white",binaxis="y",position=position_dodge(),stackdir = "center")+
-    # geom_errorbar(aes(ymin=perc.mean.count-perc.sd.count,ymax=perc.mean.count+perc.sd.count,
-    #                   group=as.factor(cluster)),position=position_dodge(),alpha=0.6)+
     ylab("Proportion / %") + xlab("time / h") +
-    # scale_y_continuous(expand = c(0,0))+
     scale_color_viridis(
       labels = c("Cells", "Forespores", "Spores"), discrete = TRUE, end = c(0.8), direction = -1,
       alpha = 0.8
@@ -412,8 +408,6 @@ figure_34 <- function() {
       legend.position = c(0.20, 0.9)
     ) +
     xlab("")
-
-  # ccount2
 
   sample.var <- c("strain", "time", "stain", "tripl")
   fcsset3A <- flowCreateFlowSet(
@@ -427,7 +421,7 @@ figure_34 <- function() {
     flowFcsToDf() %>%
     dplyr::filter(stain != "unstained")
 
-  ### splitting and applying gmm
+  # splitting and applying gmm
   centers.list <- list(
     df3.mix$classification,
     df3.mix$classification,
@@ -456,17 +450,10 @@ figure_34 <- function() {
     group_by(strain, time, cluster, stain) %>%
     summarize(count = n()) %>%
     ungroup() %>%
-    # group_by(strain,time,cluster)%>%
-    # summarize(mean.count=mean(count),sd.count=sd(count))%>%
-    # ungroup()%>%
-    # group_by(strain,time)%>%
-    # mutate(perc.mean.count=100*mean.count/sum(mean.count),perc.sd.count=100*sd.count/sum(mean.count))%>%
     separate(time, c("time", "h"), 2) %>%
     mutate(time = as.numeric(time)) %>%
     group_by(strain, time, stain) %>%
     mutate(perc.count = 100 * count / sum(count))
-
-  # table(c.count.A$strain, c.count.A$time, c.count.A$cluster, c.count.A$stain)
 
   c.count.A %>% write.csv(file = "suppl/population_count.csv")
 
@@ -478,10 +465,6 @@ figure_34 <- function() {
     stat_summary(aes(col = as.factor(cluster)),
       fun.y = "mean", geom = "line", size = 2
     ) +
-    # geom_dotplot(aes(x = as.factor(time),fill=as.factor(cluster)),binaxis="y",
-    # position=position_dodge(),stackdir = "center")+
-    # stat_summary(aes(x = as.factor(time),y = perc.count,col=as.factor(cluster)),
-    #              position=position_dodge(1),fun.y="mean",geom="point")+
     ylab("Proportion / %") + xlab("time / h") +
     scale_y_continuous(expand = c(0, 0)) +
     facet_grid(strain ~ .) +
