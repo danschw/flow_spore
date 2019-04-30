@@ -59,7 +59,7 @@ source("src/functions.R")
     ggplot(aes(asinh.FL1.A)) +
     geom_density(aes(fill = ident, y = ..scaled..), alpha = 0.4) +
     guides(fill = FALSE) +
-    ylab("norm. count") + xlim(c(5, 14)) +
+    ylab("") + xlim(c(5, 14)) +
     scale_fill_viridis(discrete = TRUE, alpha = 0.7, begin = 0, end = 0.8, direction = -1)
 
   legend.plot <- df1 %>%
@@ -86,7 +86,8 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
 #### Figure 2: - Measuring cells and spores together: ability to separate with GMM ####
 
-{ # loading
+# Loading
+{
   rm(list = ls())
   source("src/functions.R")
 
@@ -101,6 +102,13 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     sample_variables = sample.var,
     additional_variable = 90, transformation = TRUE
   )
+
+  ## ???
+  # pData(fcsset2.1[[10]])
+  # fcsset2.1[[10]]%>%
+  #       Subset(., norm2Filter("FSC-H", "FSC-W", filterId = "norm_ssc.fsc", scale = 2)) %>%
+  #       autoplot("asinh.FSC.A")
+
 
   # combinations of stain, channel, concentration and time to examine
   cases <- data.frame(
@@ -117,7 +125,13 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     "["(-c(21, 22)) # removing unstained at second time point, this was not measured
 
   f2.df <- rbind2(fcsset2.1, fcsset2.2) %>%
-    Subset(., norm2Filter("FSC-H", "FSC-W", filterId = "norm_ssc.fsc", scale = 5)) %>%
+    Subset(rectangleGate(
+      "asinh.FSC.A" = c(0, 15),
+      "asinh.SSC.A" = c(0, 15),
+      "asinh.FL1.A" = c(0, 15),
+      "asinh.FL3.A" = c(0, 15)
+    )) %>%
+    Subset(., norm2Filter("FSC-H", "FSC-W", filterId = "norm_ssc.fsc", scale = 2)) %>%
     flowFcsToDf(.) %>%
     dplyr::filter(ident == "Cells+spores") %>%
     select(type, stain, time, asinh.FL1.A, asinh.FL3.A, asinh.FSC.A, asinh.SSC.A) %>%
@@ -132,71 +146,91 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
         with(value) %>%
         Mclust(., 2)
     })
-  beep()
-
-  plot.list <- Map(function(x, y) {
-    ggplot() +
-      geom_density(aes(x = x$data)) +
-      # geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
-      stat_function(aes(x$data),
-        fun = sdnorm, n = 999,
-        args = list(
-          mean = x$parameters$mean[1],
-          sd = sqrt(x$parameters$variance$sigmasq[1]),
-          lambda = x$parameters$pro[1]
-        ),
-        col = "#F8766D", linetype = "dashed"
-      ) +
-      stat_function(aes(x$data),
-        fun = sdnorm, n = 999,
-        args = list(
-          mean = x$parameters$mean[2],
-          sd = sqrt(firstsecondElement(x$parameters$variance$sigmasq)),
-          lambda = x$parameters$pro[2]
-        ),
-        col = "#00BFC4", linetype = "dashed"
-      ) +
-      scale_color_discrete(guide = FALSE) +
-      theme(
-        axis.text.y = element_blank(),
-        axis.text.x = element_text(size = 12),
-        axis.title.x = element_text(size = 12)
-      ) +
-      xlab(y) +
-      # xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
-      #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
-      ylab("")
-  }, models.list[names(models.list) %in% cases], cases)
-}
-
-ggsave(
-  plot = do.call(plot_grid, c(plot.list, ncol = 4)),
-  filename = "suppl/Supplemental3.pdf", width = 16, height = 24
-)
-
-{
-  models.list.clean <- models.list[names(models.list) %in% cases]
 
   # get distribution parameters
   distr.values <- lapply(models.list.clean, function(x) {
-    c(x$parameters$mean, sqrt(firstsecondPair(x$parameters$variance$sigmasq)))
+    c(x$parameters$mean, sqrt(firstsecondPair(x$parameters$variance$sigmasq)), x$parameters$pro)
   }) %>%
     do.call("rbind", .) %>%
     as_tibble() %>%
-    magrittr::set_colnames(c("mu_1", "mu_2", "sd_1", "sd_2")) %>%
+    magrittr::set_colnames(c("mu_1", "mu_2", "sd_1", "sd_2", "pro_1", "pro_2")) %>%
     mutate(
       diffM = mu_2 - mu_1, # difference between means
-      pooledSD = sqrt((sd_1^2 + sd_2^2) / 2) # pooled standard deviation
+      pooledSD = sqrt((sd_1^2 + sd_2^2) / 2), # pooled standard deviation
+      cutoff = findCutoffs(mu_1, sd_1, pro_1, mu_2, sd_2, pro_2) # cutoff values
     ) %>%
     cbind(., cases) %>%
     separate(cases, into = c("type", "stain", "time", "z", "channel"))
 
-  distr.values
+  beep()
+}
 
+# Supplemental 3
+{
+  plot_sup3 <- function(model.list, model.cases) {
+    Map(function(x, y) {
+      ggplot() +
+        geom_density(aes(x = x$data), size = 1.2) +
+        # geom_line(aes(x$data,x$classification-1),col="brown",alpha=0.3)+
+        stat_function(aes(x$data),
+          fun = sdnorm, n = 999,
+          args = list(
+            mean = x$parameters$mean[1],
+            sd = sqrt(x$parameters$variance$sigmasq[1]),
+            lambda = x$parameters$pro[1]
+          ),
+          col = "#F8766D", linetype = "dashed", size = 1.2
+        ) +
+        stat_function(aes(x$data),
+          fun = sdnorm, n = 999,
+          args = list(
+            mean = x$parameters$mean[2],
+            sd = sqrt(firstsecondElement(x$parameters$variance$sigmasq)),
+            lambda = x$parameters$pro[2]
+          ),
+          col = "#00BFC4", linetype = "dashed", size = 1.2
+        ) +
+        scale_color_discrete(guide = FALSE) +
+        theme(
+          axis.text.y = element_blank(),
+          axis.text.x = element_text(size = 14),
+          axis.title.x = element_text(size = 16)
+        ) +
+        xlab(y) +
+        # xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
+        #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
+        ylab("")
+    }, model.list, model.cases)
+  }
+
+  models.list.clean <- models.list[cases]
+
+  # splitting supplemental as requested by reviewer
+  plot.list <- plot_sup3(models.list.clean, cases)
+  plot.list1 <- plot_sup3(models.list.clean[1:11], cases[1:11])
+  plot.list2 <- plot_sup3(models.list.clean[12:20], cases[12:20])
+
+  ggsave(
+    plot = do.call(plot_grid, c(plot.list1, ncol = 3)),
+    filename = "suppl/Supplemental3A.pdf", width = 12, height = 15
+  )
+
+  ggsave(
+    plot = do.call(plot_grid, c(plot.list2, ncol = 3)),
+    filename = "suppl/Supplemental3B.pdf", width = 12, height = 11.25
+  )
+
+  ggsave(
+    plot = do.call(plot_grid, c(plot.list, ncol = 4)),
+    filename = "suppl/Supplemental3.pdf", width = 16, height = 24
+  )
+}
+
+# Supplemental 2
+{
   PS2.A <- distr.values %>%
     ggplot(aes(stain, diffM, fill = interaction(channel, type))) +
     geom_bar(stat = "identity", position = position_dodge(), alpha = 0.8) +
-    # geom_boxplot(stat="identity",position=position_dodge(),alpha=0.8)+
     geom_errorbar(aes(ymin = diffM - pooledSD, ymax = diffM + pooledSD, group = interaction(channel, type)),
       position = position_dodge(), alpha = 0.8
     ) +
@@ -207,10 +241,8 @@ ggsave(
 
   PS2.B <- read_csv("data/viability2.csv") %>%
     gather("tripl", "value", 5:7) %>%
-    # mutate(conc=fct_reorder(conc))
     dplyr::filter(!is.na(value)) %>%
-    # mutate()%>%
-    ggplot(aes(fct_inorder(conc), as.numeric(value) / 210, col = stain)) +
+    ggplot(aes(fct_inorder(conc), as.numeric(value) / 2.10, col = stain)) +
     geom_point(aes(shape = type),
       alpha = 0.9,
       position = position_dodge(width = 0.3),
@@ -218,7 +250,7 @@ ggsave(
     ) +
     geom_line(
       stat = "summary", fun.y = "mean",
-      aes(as.numeric(fct_inorder(conc)), as.numeric(value) / 210, linetype = type),
+      aes(as.numeric(fct_inorder(conc)), as.numeric(value) / 2.10, linetype = type),
       alpha = 0.8, size = 1, position = position_dodge(width = 0.3)
     ) +
     facet_grid(time ~ .) +
@@ -231,21 +263,20 @@ ggsave(
   ggsave("suppl/Supplemental1.pdf", width = 8, height = 10, dpi = 300, units = "in")
 }
 
-
-
-FIG2.1 <- distr.values %>%
-  dplyr::filter(time == 30 & stain == 2 | time == 30 & stain == 0) %>%
-  ggplot(aes(interaction(type, channel), diffM, fill = channel)) +
-  geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
-  geom_errorbar(aes(ymin = diffM - pooledSD, ymax = diffM + pooledSD), width = 0.5) + xlab("") +
-  ylab("Difference spore/cell distributions") + scale_color_discrete(name = "") +
-  scale_y_continuous(expand = c(0, 0)) +
-  theme(legend.position = c(0.6, 0.8), axis.text.x = element_text(angle = 30, hjust = 1)) +
-  scale_x_discrete(label = c("SYBR1", "SYBR2", "PI", "FSC", "SSC"))
-
-FIG2.1
-
+# Figure 2
 {
+  # Figure 2, predicted means with pooled standard deviations
+  FIG2.1 <- distr.values %>%
+    dplyr::filter(time == 30 & stain == 2 | time == 30 & stain == 0) %>%
+    ggplot(aes(interaction(type, channel), diffM, fill = channel)) +
+    geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
+    geom_errorbar(aes(ymin = diffM - pooledSD, ymax = diffM + pooledSD), width = 0.5) + xlab("") +
+    ylab("Difference spore/cell distributions") + scale_color_discrete(name = "") +
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = c(0.6, 0.8), axis.text.x = element_text(angle = 30, hjust = 1)) +
+    scale_x_discrete(label = c("SYBR1", "SYBR2", "PI", "FSC", "SSC"))
+
+  # Figure 2, raw data panel
   f2.2 <- f2.df %>%
     group_by(type, stain, time) %>%
     mutate(id = row_number()) %>%
@@ -254,11 +285,11 @@ FIG2.1
     dplyr::select(-id)
 
   # translate so that cutoff is at 0
-  f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] - cutoffs.list[5]
-  f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] - cutoffs.list[8]
-  f2.2$asinh.FSC.A <- f2.2$asinh.FSC.A - cutoffs.list[10]
-  f2.2$asinh.SSC.A <- f2.2$asinh.SSC.A - cutoffs.list[11]
-  f2.2$asinh.FL3.A <- f2.2$asinh.FL3.A - cutoffs.list[2]
+  f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] - distr.values$cutoff[5]
+  f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] - distr.values$cutoff[8]
+  f2.2$asinh.FSC.A <- f2.2$asinh.FSC.A - distr.values$cutoff[10]
+  f2.2$asinh.SSC.A <- f2.2$asinh.SSC.A - distr.values$cutoff[11]
+  f2.2$asinh.FL3.A <- f2.2$asinh.FL3.A - distr.values$cutoff[2]
 
   FIG2.2 <- f2.2 %>%
     gather("channel", "value", 4:7) %>%
@@ -277,14 +308,14 @@ FIG2.1
     geom_vline(aes(xintercept = 0), col = "red") +
     xlim(c(-5, 5)) +
     xlab("translated scatter/fluorescence signal") + ylab("")
+
+  plot_grid(FIG2.2, FIG2.1, rel_widths = c(0.60, 0.4), labels = c("A", "B"))
+  ggsave("fig/Figure_2.pdf", width = 10, height = 5)
 }
-plot_grid(FIG2.2, FIG2.1, rel_widths = c(0.60, 0.4), labels = c("A", "B"))
-ggsave("fig/Figure_2.pdf", width = 10, height = 5)
-
-
-
 
 #### Figure 3+4: Clustering ####
+
+# Supplemental 4
 {
   rm(list = ls())
   source("src/functions.R")
@@ -306,8 +337,40 @@ ggsave("fig/Figure_2.pdf", width = 10, height = 5)
   write.csv(centers.list.df, "suppl/centers_f3.csv")
   center.locs <- factor(df3.mix$classification, levels = c(1, 2, 3))
 
+  clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
+        ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
+        geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
+        geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
+        xlim(c(10,15))+ylim(c(2.5,15))+
+        scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
+                           guide = FALSE)+
+        scale_alpha_continuous(guide = FALSE)+
+        theme_bw()+
+        geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="blue",size=1)+
+        geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="blue",size=1)+
+        geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="blue",size=1)
+  
+  clplot1
+  
+  clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
+        ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
+        geom_hex(aes(fill=as.factor(cluster)),bins=300)+
+        geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
+        xlim(c(10,15))+ylim(c(9,12))+
+        scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
+                           guide=FALSE)+
+        scale_alpha_continuous(guide = FALSE)+
+        theme_bw()+
+        geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="blue",size=1)+
+        geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="blue",size=1)+
+        geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="blue",size=1)
+  
+  clplot2
+  
+  plot_grid(clplot1,clplot2,align = "h")
+  ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
+  
   # Prediction for other cases
-
   df3.list <- df3 %>%
     dplyr::select(asinh.FSC.A, asinh.SSC.A, asinh.FL1.A, strain, time, tripl) %>%
     split(., df3$strain)
@@ -339,7 +402,8 @@ ggsave("fig/Figure_2.pdf", width = 10, height = 5)
   beep()
   # ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
 }
-# FIGURE 4B
+
+# Figure 4B
 {
   c.count.B <- clusterB.pred %>%
     group_by(strain, time, cluster, tripl) %>%
@@ -374,8 +438,7 @@ ggsave("fig/Figure_2.pdf", width = 10, height = 5)
   ccount2
 }
 
-#### Figure 4A
-
+# Figure 4A
 {
   source("src/functions.R")
   sample.var <- c("strain", "time", "stain", "tripl")
