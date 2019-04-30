@@ -1,7 +1,7 @@
 source("src/functions.R")
 
 #### Figure 1 - Separation of Cells vs Spores possible, overview plot ####
-{
+figure_1 <- function() {
   # sample variables
   sample.var <- c("strain", "ident", "stain", "mode", "run")
 
@@ -80,17 +80,15 @@ source("src/functions.R")
     annotate(geom = "text", x = -10, y = 35, parse = TRUE, label = "bold('D')~SYBR1~stain", hjust = 0, size = 4) +
     annotate(geom = "text", x = -10, y = 25, parse = TRUE, label = "bold('E')~SYBR2~stain", hjust = 0, size = 4) +
     geom_rect(aes(xmin = -10, xmax = 100, ymin = 0, ymax = 1), color = "white", size = 2, fill = "white")
+
+  plot_grid(SSC.plot, FSC.plot, PI.plot, S1.plot, S2.plot, legend.plot, ncol = 3, labels = "AUTO")
+  ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 }
-plot_grid(SSC.plot, FSC.plot, PI.plot, S1.plot, S2.plot, legend.plot, ncol = 3, labels = "AUTO")
-ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
 #### Figure 2: - Measuring cells and spores together: ability to separate with GMM ####
 
-# Loading
-{
-  rm(list = ls())
-  source("src/functions.R")
-
+figure_2 <- function() {
+  set.seed(1)
   sample.var <- c("ident", "type", "stain", "t1", "t2", "t3", "time")
   fcsset2.1 <- flowCreateFlowSet(
     filepath = "data/f2/set5_cells+spores_30/",
@@ -147,6 +145,8 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
         Mclust(., 2)
     })
 
+  models.list.clean <- models.list[cases]
+
   # get distribution parameters
   distr.values <- lapply(models.list.clean, function(x) {
     c(x$parameters$mean, sqrt(firstsecondPair(x$parameters$variance$sigmasq)), x$parameters$pro)
@@ -162,11 +162,6 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     cbind(., cases) %>%
     separate(cases, into = c("type", "stain", "time", "z", "channel"))
 
-  beep()
-}
-
-# Supplemental 3
-{
   plot_sup3 <- function(model.list, model.cases) {
     Map(function(x, y) {
       ggplot() +
@@ -203,8 +198,6 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     }, model.list, model.cases)
   }
 
-  models.list.clean <- models.list[cases]
-
   # splitting supplemental as requested by reviewer
   plot.list <- plot_sup3(models.list.clean, cases)
   plot.list1 <- plot_sup3(models.list.clean[1:11], cases[1:11])
@@ -224,10 +217,7 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     plot = do.call(plot_grid, c(plot.list, ncol = 4)),
     filename = "suppl/Supplemental3.pdf", width = 16, height = 24
   )
-}
 
-# Supplemental 2
-{
   PS2.A <- distr.values %>%
     ggplot(aes(stain, diffM, fill = interaction(channel, type))) +
     geom_bar(stat = "identity", position = position_dodge(), alpha = 0.8) +
@@ -261,10 +251,7 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
   plot_grid(PS2.A, PS2.B, nrow = 2, labels = c("A", "B"))
   ggsave("suppl/Supplemental1.pdf", width = 8, height = 10, dpi = 300, units = "in")
-}
 
-# Figure 2
-{
   # Figure 2, predicted means with pooled standard deviations
   FIG2.1 <- distr.values %>%
     dplyr::filter(time == 30 & stain == 2 | time == 30 & stain == 0) %>%
@@ -315,10 +302,8 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
 #### Figure 3+4: Clustering ####
 
-# Supplemental 4
-{
-  rm(list = ls())
-  source("src/functions.R")
+figure_34 <- function() {
+  set.seed(1)
   sample.var <- c("strain", "time", "tripl")
   fcsset3 <- flowCreateFlowSet(filepath = "data/f3/set9/", sample_variables = sample.var, transformation = TRUE)
 
@@ -329,7 +314,6 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
   # Load reference containing all subpopulations
   df3.ref <- ref.ds(strn = "Bs02003", time = "24h", tripl = 2, df = df3)
-  set.seed(1)
   df3.mix <- mclust::Mclust(data = df3.ref, G = 3)
 
   # getting centers for visualization and export
@@ -337,39 +321,6 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
   write.csv(centers.list.df, "suppl/centers_f3.csv")
   center.locs <- factor(df3.mix$classification, levels = c(1, 2, 3))
 
-  clplot1<-data.frame(df3.ref,cluster=center.locs)%>%
-        ggplot(aes(asinh.SSC.A,asinh.FL1.A))+
-        geom_hex(aes(fill=as.factor(cluster)),bins=300)+ #,alpha=..ncount.. #order= ?
-        geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-        xlim(c(10,15))+ylim(c(2.5,15))+
-        scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-                           guide = FALSE)+
-        scale_alpha_continuous(guide = FALSE)+
-        theme_bw()+
-        geom_point(aes(centers.list.df[1,2],centers.list.df[1,3]),col="blue",size=1)+
-        geom_point(aes(centers.list.df[2,2],centers.list.df[2,3]),col="blue",size=1)+
-        geom_point(aes(centers.list.df[3,2],centers.list.df[3,3]),col="blue",size=1)
-  
-  clplot1
-  
-  clplot2<-data.frame(df3.ref,cluster=center.locs)%>%
-        ggplot(aes(x = asinh.SSC.A,y = asinh.FSC.A))+
-        geom_hex(aes(fill=as.factor(cluster)),bins=300)+
-        geom_density2d(col="red",bins=20,size=0.5,alpha=0.7)+
-        xlim(c(10,15))+ylim(c(9,12))+
-        scale_fill_viridis(discrete = TRUE,end=0.8,label=c("Cells","Forespores","Spores"),name="",direction = -1,
-                           guide=FALSE)+
-        scale_alpha_continuous(guide = FALSE)+
-        theme_bw()+
-        geom_point(aes(centers.list.df[1,2],centers.list.df[1,1]),col="blue",size=1)+
-        geom_point(aes(centers.list.df[2,2],centers.list.df[2,1]),col="blue",size=1)+
-        geom_point(aes(centers.list.df[3,2],centers.list.df[3,1]),col="blue",size=1)
-  
-  clplot2
-  
-  plot_grid(clplot1,clplot2,align = "h")
-  ggsave("fig/Figure_3.png",width = 8, height = 4,dpi = 900)
-  
   # Prediction for other cases
   df3.list <- df3 %>%
     dplyr::select(asinh.FSC.A, asinh.SSC.A, asinh.FL1.A, strain, time, tripl) %>%
@@ -387,6 +338,38 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 
   clusterB.pred <- cbind(clusterB.annot, cluster = clusterB.predict)
 
+  clplot1 <- data.frame(df3.ref, cluster = center.locs) %>%
+    ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
+    geom_hex(aes(fill = as.factor(cluster)), bins = 300) + # ,alpha=..ncount.. #order= ?
+    geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+    xlim(c(10, 15)) + ylim(c(2.5, 15)) +
+    scale_fill_viridis(
+      discrete = TRUE, end = 0.8, label = c("Cells", "Forespores", "Spores"), name = "", direction = -1,
+      guide = FALSE
+    ) +
+    scale_alpha_continuous(guide = FALSE) +
+    theme_bw() +
+    geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
+    geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) +
+    geom_point(aes(centers.list.df[3, 2], centers.list.df[3, 3]), col = "blue", size = 1)
+
+  clplot2 <- data.frame(df3.ref, cluster = center.locs) %>%
+    ggplot(aes(x = asinh.SSC.A, y = asinh.FSC.A)) +
+    geom_hex(aes(fill = as.factor(cluster)), bins = 300) +
+    geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+    xlim(c(10, 15)) + ylim(c(9, 12)) +
+    scale_fill_viridis(
+      discrete = TRUE, end = 0.8, label = c("Cells", "Forespores", "Spores"), name = "", direction = -1,
+      guide = FALSE
+    ) +
+    scale_alpha_continuous(guide = FALSE) +
+    theme_bw() +
+    geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 1]), col = "blue", size = 1) +
+    geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 1]), col = "blue", size = 1) +
+    geom_point(aes(centers.list.df[3, 2], centers.list.df[3, 1]), col = "blue", size = 1)
+
+  plot_grid(clplot1, clplot2, align = "h")
+  ggsave("fig/Figure_3.png", width = 8, height = 4, dpi = 900)
 
   # supplemental 4
   clusterB.pred %>%
@@ -399,12 +382,7 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     theme_bw()
 
   ggsave("suppl/Supplemental_4.pdf", width = 4, height = 6)
-  beep()
-  # ggsave("suppl/ps4_f4b.png",width = 4, height = 6)
-}
 
-# Figure 4B
-{
   c.count.B <- clusterB.pred %>%
     group_by(strain, time, cluster, tripl) %>%
     summarize(count = n()) %>%
@@ -435,12 +413,8 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
     ) +
     xlab("")
 
-  ccount2
-}
+  # ccount2
 
-# Figure 4A
-{
-  source("src/functions.R")
   sample.var <- c("strain", "time", "stain", "tripl")
   fcsset3A <- flowCreateFlowSet(
     filepath = "data/f3/set8/",
@@ -477,42 +451,7 @@ ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
   ))
 
   cluster.pred.A <- cbind(cluster.annot.A, cluster = cluster.predict.A)
-}
 
-# Supplemental
-
-suppl6 <- lapply(1:3, function(x) {
-  cluster.pred.A %>%
-    # dplyr::filter(!stain=="unstained")%>%
-    dplyr::filter(stain == x) %>%
-    ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
-    # geom_density_ridges()+
-    geom_hex(aes(), bins = 200) +
-    scale_fill_viridis() +
-    facet_grid(time ~ strain) +
-    xlim(c(10, 15)) + ylim(c(2.5, 14)) +
-    # scale_fill_viridis()+
-    theme_bw()
-})
-
-# ggsave("suppl/ps4B_f4a.pdf",width = 4, height = 6)
-
-lapply(1, function(x) {
-  cluster.pred.A %>%
-    # dplyr::filter(!stain=="unstained")%>%
-    dplyr::filter(stain == x) %>%
-    ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
-    # geom_density_ridges()+
-    # geom_polygon()+
-    geom_hex(aes(col = as.factor(cluster), fill = log(..count..)), bins = 30) +
-    facet_grid(strain ~ time) +
-    xlim(c(10, 15)) + ylim(c(2.5, 14)) +
-    # scale_fill_viridis()+
-    theme_bw() +
-    scale_fill_viridis()
-})
-
-{
   c.count.A <- cluster.pred.A %>%
     group_by(strain, time, cluster, stain) %>%
     summarize(count = n()) %>%
@@ -527,7 +466,7 @@ lapply(1, function(x) {
     group_by(strain, time, stain) %>%
     mutate(perc.count = 100 * count / sum(count))
 
-  table(c.count.A$strain, c.count.A$time, c.count.A$cluster, c.count.A$stain)
+  # table(c.count.A$strain, c.count.A$time, c.count.A$cluster, c.count.A$stain)
 
   c.count.A %>% write.csv(file = "suppl/population_count.csv")
 
@@ -555,16 +494,14 @@ lapply(1, function(x) {
     theme(panel.spacing = unit(1, "lines"), legend.title = element_blank()) +
     xlab("time / h")
 
-  ccount1
   plot_grid(ccount1, ccount2, nrow = 1, rel_widths = c(0.6, 0.4), labels = c("A", "B"))
 
   ggsave("fig/Figure_4.pdf", width = 8, height = 5)
-  beep()
 }
 
 #### Supplemental: Combinations ####
 
-{
+supplemental_2 <- function() {
   remove(list = ls())
   source("src/functions.R")
   sample.var <- c("ident", "type", "stain", "conc", "trash")
@@ -572,7 +509,6 @@ lapply(1, function(x) {
     Subset(., norm2Filter("FSC-H", "FSC-W", filterId = "norm_ssc.fsc", scale = 1)) %>%
     Subset(rectangleGate("asinh.FL1.A" = c(0, 15), "asinh.FL3.A" = c(0, 15))) %>%
     flowFcsToDf(.)
-
 
   fcs.df1 %>%
     select(type, stain, conc, asinh.FL1.A, asinh.FL3.A) %>%
@@ -612,4 +548,37 @@ lapply(1, function(x) {
     summary()
 
   write.csv2(fcs.df2, "suppl/mixdesign.csv")
+}
+
+#### Additional Figures ####
+
+adfig <- function() {
+  suppl6 <- lapply(1:3, function(x) {
+    cluster.pred.A %>%
+      # dplyr::filter(!stain=="unstained")%>%
+      dplyr::filter(stain == x) %>%
+      ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
+      # geom_density_ridges()+
+      geom_hex(aes(), bins = 200) +
+      scale_fill_viridis() +
+      facet_grid(time ~ strain) +
+      xlim(c(10, 15)) + ylim(c(2.5, 14)) +
+      # scale_fill_viridis()+
+      theme_bw()
+  })
+
+  lapply(1, function(x) {
+    cluster.pred.A %>%
+      # dplyr::filter(!stain=="unstained")%>%
+      dplyr::filter(stain == x) %>%
+      ggplot(aes(asinh.SSC.A, asinh.FL1.A)) +
+      # geom_density_ridges()+
+      # geom_polygon()+
+      geom_hex(aes(col = as.factor(cluster), fill = log(..count..)), bins = 30) +
+      facet_grid(strain ~ time) +
+      xlim(c(10, 15)) + ylim(c(2.5, 14)) +
+      # scale_fill_viridis()+
+      theme_bw() +
+      scale_fill_viridis()
+  })
 }
