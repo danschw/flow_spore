@@ -1,0 +1,136 @@
+LOCUS       p11083.2                4235 bp    DNA     circular UNA 02-MAY-2019
+DEFINITION  skf knockout.
+ACCESSION   urn.local.mka.55-abyagg7
+VERSION     urn.local.mka.55-abyagg7
+KEYWORDS    .
+SOURCE      
+  ORGANISM  .
+FEATURES             Location/Qualifiers
+     misc_feature    64..575
+                     /note="Geneious type: Homology"
+                     /standard_name="FRONT"
+     source          64..575
+                     /organism="Bacillus subtilis PY79"
+                     /mol_type="genomic DNA"
+                     /strain="PY79"
+                     /db_xref="taxon:1415167"
+     primer_bind     64..83
+                     /standard_name=11291
+     misc_feature    complement(555..575)
+                     /note="Geneious type: primer_bind_reverse"
+                     /standard_name=11290
+     misc_feature    576..609
+                     /standard_name="lox71"
+     source          576..609
+     source          610..1655
+     misc_feature    complement(710..732)
+                     /note="Geneious type: primer_bind_reverse"
+                     /standard_name=13036
+     misc_feature    complement(747..1526)
+                     /note="Geneious type: marker"
+                     /standard_name="SpecR"
+     misc_feature    complement(795..819)
+                     /note="Geneious type: primer_bind_reverse"
+                     /standard_name=11379
+     misc_feature    1656..1689
+                     /standard_name="lox66"
+     source          1656..1689
+     misc_feature    1690..2222
+                     /note="Geneious type: Homology"
+                     /standard_name="Back.2"
+     source          <1690..>2222
+                     /organism="Bacillus subtilis PY79"
+                     /mol_type="genomic DNA"
+                     /strain="PY79"
+                     /db_xref="taxon:1415167"
+     primer_bind     1690..1715
+                     /standard_name=11403
+     gene            1908..>2222
+                     /locus_tag="U712_RS01230"
+                     /old_locus_tag="U712_01010"
+                     /standard_name="gene"
+     misc_feature    complement(2202..2222)
+                     /note="Geneious type: primer_bind_reverse"
+                     /standard_name=11404
+     source          2223..63
+     misc_feature    complement(2391..3010)
+                     /note="Geneious type: origin of replication"
+                     /standard_name="pBR322 origin"
+     misc_feature    complement(3165..4025)
+                     /note="Geneious type: marker"
+                     /standard_name="AmpR"
+     promoter        complement(4067..4095)
+                     /standard_name="amp prom"
+ORIGIN      
+        1 aacaaaattc tccagtcttc acatcggttt gaaaggagga agcggaagaa tgaagtaaga
+       61 gggcgtaaac ctgaacatcc gcgtaaacgt caaggaagtt gccacttggg gagtaaacac
+      121 ttgcatcatc tcgctgaaag gcctagacaa tgcggatgac agattcgtat tgccggaagt
+      181 aaacacagcg cttgctctgt ttccgttgtc gattgcagct gattgcttac taatgctgcc
+      241 ctgcatctcg gttgtgatgt cgataagcag cgtaatgaag agtgttactg tggagtaaga
+      301 tgtttaaccc ctctggatat tttagccgaa ggggttttta gtatagatat ttgatttaaa
+      361 ttacaggaga cttcattcat ttaaccaaag tcattgcttt cttaatcact aaagtttatt
+      421 tgaaaataat ctcttgattt aatttcctcg aagagatttt ttgtcaatct attaggcatc
+      481 agaattttta taacataatg gaccgtcttt ttgacgtttt gtttatagaa caagaaaata
+      541 ttcaaaacat aagtggaaaa ttaggggtga gctcctaccg ttcgtatagc atacattata
+      601 cgaagttatc ggtactaaat taaagtaata aagcgttctc taatttcaca agaggacgct
+      661 ttattcttcc caaaaattgt tcaatattta tcaataaatc agtagtttta aaagtaagca
+      721 cctgttattg caataaaatt agcctaattg agagaagttt ctatagaatt tttcatatac
+      781 ttaacgagtg ctttcacctt tgaatatagt ccttcccact tatcatcaca ctctccccga
+      841 tagccttttc tagctatatc cagtaaagtt acatgctctt taggtaaaag aggtatagcc
+      901 cattctgcag cgacatcttt cgaggtaatt tcaccagtag tcactgtttg ccacattcga
+      961 gctagggtta aaattacatt acgctcatca ccttttatcc cctcaattag ttctggcaaa
+     1021 gaatccttaa ttgctcttcg aatatctgtc aaaggtacgg agacaagtat acttgaagaa
+     1081 tcaggaccaa atagagaaat actattcttt cttgcttgtg ctaaaacaat agccaaatca
+     1141 ggatcatagc ttggttcctg aatttgtcca ttctcaaatt cacccctgag ccactcaccg
+     1201 tatataaatt ctctttttgg aggatattgc caagggacaa cttcactcct atttataacc
+     1261 gtaacttcaa gtggtctaac agaatccgta tttccaatct ttcctgatat agtcattagt
+     1321 ctttctgtta gtttttttcg agttaattga ggtaaactat gattcacgac gactagaaca
+     1381 tctacatcgc tgttaatgcg taaaccacca tttactgctg aaccaaatag atatactcca
+     1441 actattgaac ttccaaataa atcttttacg atttttaatg tttgaatcgc ttgatttggt
+     1501 atttttccgt taatcaaatt gctcatgatt tcacctcgtt gattatgttc atataaagtt
+     1561 tatattgata ctcaatttac ttaccctaga ttggacatat acttaaatta ctgttcaata
+     1621 aagctgaccg ttagcgttta agtcgacctg caggcataac ttcgtatagc atacattata
+     1681 cgaacggtag gttgaatatt atgatgaaac ggtccttcct ataagcagga aggtttttta
+     1741 atgaaatatt tttttattag taggtaaatt catcaaatgt tctgctatgc tccaaatgta
+     1801 cacctttccg taagggcaaa gtcaaatgtg aaaaaaaact gttccaaagt taatcagaaa
+     1861 tttattttca tattgtatcc ttcggtatca agtgaaagga gcatcatatg aaaacattat
+     1921 ggaaagtcct caaaattgtt tttgtcagct tggctgcttt ggttttgctt gtatccgtct
+     1981 cggtatttat ttatcaccat ttccagctaa ataaggaggc ggcactgctg aaaggtaaag
+     2041 gcacagtagt cgatgttgac ggtaaaaaga tgaatgtgta tcaagaggga agcgggaagg
+     2101 atacgtttgt gtttatgtcc ggttcgggta ttgctgcgcc tgcttatgaa atgaaggggc
+     2161 tgtacagcaa gttttcaaaa gaaaataaga ttgctgttgt agatcgggca ggttatggat
+     2221 acgctgaact tagtattagt ggccatactc ctccaatcca aagctattta gaaagattac
+     2281 tatatcctca aacaggcggt aaccggcctc ttcatcggga atgcgcgcga ccttcagcat
+     2341 cgccggcatg tccccctggc ggacgggaag tatccagctc gaggtcgggc cgcgttgctg
+     2401 gcgtttttcc ataggctccg cccccctgac gagcatcaca aaaatcgacg ctcaagtcag
+     2461 aggtggcgaa acccgacagg actataaaga taccaggcgt ttccccctgg aagctccctc
+     2521 gtgcgctctc ctgttccgac cctgccgctt accggatacc tgtccgcctt tctcccttcg
+     2581 ggaagcgtgg cgctttctca tagctcacgc tgtaggtatc tcagttcggt gtaggtcgtt
+     2641 cgctccaagc tgggctgtgt gcacgaaccc cccgttcagc ccgaccgctg cgccttatcc
+     2701 ggtaactatc gtcttgagtc caacccggta agacacgact tatcgccact ggcagcagcc
+     2761 actggtaaca ggattagcag agcgaggtat gtaggcggtg ctacagagtt cttgaagtgg
+     2821 tggcctaact acggctacac tagaaggaca gtatttggta tctgcgctct gctgaagcca
+     2881 gttaccttcg gaaaaagagt tgatagctct tgatccggca aacaaaccac cgctggtagc
+     2941 ggtggttttt ttgtttgcaa gcagcagatt acgcgcagaa aaaaaggatc tcaagaagat
+     3001 cctttgatct tttctacggg gtctgacgct cagtggaacg aaaactcacg ttaagggatt
+     3061 ttggtcatga gattatcaaa aaggatcttc acctagatcc ttttaaatta aaaatgaagt
+     3121 tttaaatcaa tctaaagtat atatgagtaa acttggtctg acagttacca atgcttaatc
+     3181 agtgaggcac ctatctcagc gatctgtcta tttcgttcat ccatagttgc ctgactcccc
+     3241 gtcgtgtaga taactacgat acgggagggc ttaccatctg gccccagtgc tgcaatgata
+     3301 ccgcgagacc cacgctcacc ggctccagat ttatcagcaa taaaccagcc agccggaagg
+     3361 gccgagcgca gaagtggtcc tgcaacttta tccgcctcca tccagtctat taattgttgc
+     3421 cgggaagcta gagtaagtag ttcgccagtt aatagtttgc gcaacgttgt tgccattgct
+     3481 gcaggcatcg tggtgtcacg ctcgtcgttt ggtatggctt cattcagctc cggttcccaa
+     3541 cgatcaaggc gagttacatg atcccccatg ttgtgcaaaa aagcggttag ctccttcggt
+     3601 cctccgatcg ttgtcagaag taagttggcc gcagtgttat cactcatggt tatggcagca
+     3661 ctgcataatt ctcttactgt catgccatcc gtaagatgct tttctgtgac tggtgagtac
+     3721 tcaaccaagt cattctgaga atagtgtatg cggcgaccga gttgctcttg cccggcgtca
+     3781 acacgggata ataccgcgcc acatagcaga actttaaaag tgctcatcat tggaaaacgt
+     3841 tcttcggggc gaaaactctc aaggatctta ccgctgttga gatccagttc gatgtaaccc
+     3901 actcgtgcac ccaactgatc ttcagcatct tttactttca ccagcgtttc tgggtgagca
+     3961 aaaacaggaa ggcaaaatgc cgcaaaaaag ggaataaggg cgacacggaa atgttgaata
+     4021 ctcatactct tcctttttca atattattga agcatttatc agggttattg tctcatgagc
+     4081 ggatacatat ttgaatgtat ttagaaaaat aaacaaatag gggttccgcg cacatttccc
+     4141 cgaaaagtgc cacctgacgt ctaagaaacc attattatca tgacattaac ctataaaaat
+     4201 aggcgtatca cgaggccctt tcgtcttcaa gaatt
+//
