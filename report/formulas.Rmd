@@ -1,0 +1,18 @@
+---
+title: "Formulas"
+output: html_notebook
+---
+
+$$\mu_{HP-LP}=\mu_{HP}-\mu_{LP}$$
+
+
+$$\sigma_{HP-LP}=\sqrt{\frac{\sigma_{HP}^2+\sigma^2_{LP}}{2}}$$
+
+
+$$p(\theta)=\sum_{i=1}^K \phi_i \mathcal{N}(\mu_i$$
+
+whereas K is the number of normal distributions, i.e. 2 for the separation of vegetative cells and spores in individual channels.
+
+In its most general implementation, a predefined number $k$ of cluster centroids $\{\mu_1,\mu_2,...,\mu_k}$ is randomly distributed in the feature space.
+Each observation $\{x_1,x_2,...,x_n\}$ is then assigned to each closest centroid:
+$$x_i:=argmin ||x_i-\mu_j||$$

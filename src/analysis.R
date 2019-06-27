@@ -12,8 +12,7 @@ figure_1 <- function() {
 
   SSC.plot <- df1 %>%
     dplyr::filter(mode == "SSC") %>%
-    select(asinh.SSC.A, ident, stain) %>% # ,run
-    # dplyr::filter(stain=="unstained",ident %in% c("spores","cells"))%>%
+    select(asinh.SSC.A, ident, stain) %>% 
     ggplot(aes(asinh.SSC.A)) +
     geom_density(aes(fill = ident, y = ..scaled..), alpha = 0.4) +
     ylab("norm. count") +
@@ -32,14 +31,11 @@ figure_1 <- function() {
   PI.plot <- df1 %>%
     dplyr::filter(mode == "PI") %>%
     select(asinh.FL3.A, ident, stain, run) %>%
-    # dplyr::filter(stain=="PI",run=="2x")%>%
     ggplot(aes(asinh.FL3.A)) +
     geom_density(aes(fill = ident, y = ..scaled..), alpha = 0.4) +
     guides(fill = FALSE) +
     scale_fill_viridis(discrete = TRUE, alpha = 0.7, begin = 0, end = 0.8, direction = -1) +
     xlim(c(5, 12)) +
-    # annotate(geom = "segment", x = 9, xend = 8.6, y = 0.3, yend = 0.1,
-    #          arrow=arrow(),colour = "red",alpha=0.7,size=1)+
     ylab("")
 
   PI.plot
@@ -71,17 +67,17 @@ figure_1 <- function() {
       labels = c("non-sporulating cells", "purified spores"),
       name = "", direction = -1
     ) +
-    theme(legend.position = c(0.01, 0.95)) +
+    theme(legend.position = c(0.01, 0.90)) +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) +
     ylim(0, 100) +
-    annotate(geom = "text", x = -10, y = 65, parse = TRUE, label = "bold('A')~Side~Scatter~(no~stain)", hjust = 0, size = 4) +
-    annotate(geom = "text", x = -10, y = 55, parse = TRUE, label = "bold('B')~Forward~Scatter~(no~stain)", hjust = 0, size = 4) +
-    annotate(geom = "text", x = -10, y = 45, parse = TRUE, label = "bold('C')~PI~stain", hjust = 0, size = 4) +
-    annotate(geom = "text", x = -10, y = 35, parse = TRUE, label = "bold('D')~SYBR1~stain", hjust = 0, size = 4) +
-    annotate(geom = "text", x = -10, y = 25, parse = TRUE, label = "bold('E')~SYBR2~stain", hjust = 0, size = 4) +
+    annotate(geom = "text", x = -10, y = 55, parse = TRUE, label = "bold('A')~Side~Scatter~(no~stain)", hjust = 0, size = 4) +
+    annotate(geom = "text", x = -10, y = 45, parse = TRUE, label = "bold('B')~Forward~Scatter~(no~stain)", hjust = 0, size = 4) +
+    #annotate(geom = "text", x = -10, y = 45, parse = TRUE, label = "bold('C')~PI~stain", hjust = 0, size = 4) +
+    annotate(geom = "text", x = -10, y = 35, parse = TRUE, label = "bold('C')~SYBR1~stain", hjust = 0, size = 4) +
+    annotate(geom = "text", x = -10, y = 25, parse = TRUE, label = "bold('D')~SYBR2~stain", hjust = 0, size = 4) +
     geom_rect(aes(xmin = -10, xmax = 100, ymin = 0, ymax = 1), color = "white", size = 2, fill = "white")
 
-  plot_grid(SSC.plot, FSC.plot, PI.plot, S1.plot, S2.plot, legend.plot, ncol = 3, labels = "AUTO")
+  plot_grid(SSC.plot, FSC.plot, S1.plot, S2.plot, legend.plot, ncol = 3, labels = "AUTO")
   ggsave("fig/Figure_1.pdf", width = 9, height = 5, units = "in", dpi = 300)
 }
 
@@ -101,13 +97,6 @@ figure_2 <- function() {
     additional_variable = 90, transformation = TRUE
   )
 
-  ## ???
-  # pData(fcsset2.1[[10]])
-  # fcsset2.1[[10]]%>%
-  #       Subset(., norm2Filter("FSC-H", "FSC-W", filterId = "norm_ssc.fsc", scale = 2)) %>%
-  #       autoplot("asinh.FSC.A")
-
-
   # combinations of stain, channel, concentration and time to examine
   cases <- data.frame(
     type = rep(c(rep("PI", 3), rep("SYBR1", 3), rep("SYBR2", 3), rep("unstained", 2)), 2),
@@ -120,8 +109,10 @@ figure_2 <- function() {
   ) %>%
     unite(data = ., sep = ".", col = "merge") %>%
     with(merge) %>%
-    "["(-c(21, 22)) # removing unstained at second time point, this was not measured
+    "["(-c(21, 22))# removing unstained at second time point, this was not measured
 
+  cases<-cases[-grep("PI",cases)]
+  
   f2.df <- rbind2(fcsset2.1, fcsset2.2) %>%
     Subset(rectangleGate(
       "asinh.FSC.A" = c(0, 15),
@@ -192,30 +183,28 @@ figure_2 <- function() {
           axis.title.x = element_text(size = 16)
         ) +
         xlab(y) +
-        # xlab(paste("Stain:",cases$type[i],"Concentration:",cases$stain[i],
-        #           "Time:",cases$time[i],"Channel:",cases$channel[i]))+
         ylab("")
     }, model.list, model.cases)
   }
 
   # splitting supplemental as requested by reviewer
   plot.list <- plot_sup3(models.list.clean, cases)
-  plot.list1 <- plot_sup3(models.list.clean[1:11], cases[1:11])
-  plot.list2 <- plot_sup3(models.list.clean[12:20], cases[12:20])
+  plot.list1 <- plot_sup3(models.list.clean[1:8], cases[1:8])
+  plot.list2 <- plot_sup3(models.list.clean[9:14], cases[9:14])
 
   ggsave(
     plot = do.call(plot_grid, c(plot.list1, ncol = 3)),
-    filename = "suppl/Supplemental3A.pdf", width = 12, height = 15
+    filename = "suppl/Supplemental3A.png", width = 12, height = 15
   )
 
   ggsave(
     plot = do.call(plot_grid, c(plot.list2, ncol = 3)),
-    filename = "suppl/Supplemental3B.pdf", width = 12, height = 11.25
+    filename = "suppl/Supplemental3B.png", width = 12, height = 11.25
   )
 
   ggsave(
     plot = do.call(plot_grid, c(plot.list, ncol = 4)),
-    filename = "suppl/Supplemental3.pdf", width = 16, height = 24
+    filename = "suppl/Supplemental3.png", width = 16, height = 24
   )
 
   PS2.A <- distr.values %>%
@@ -232,6 +221,7 @@ figure_2 <- function() {
   PS2.B <- read_csv("data/viability2.csv") %>%
     gather("tripl", "value", 5:7) %>%
     dplyr::filter(!is.na(value)) %>%
+        dplyr::filter(stain!="PI")%>%
     ggplot(aes(fct_inorder(conc), as.numeric(value) / 2.10, col = stain)) +
     geom_point(aes(shape = type),
       alpha = 0.9,
@@ -250,7 +240,7 @@ figure_2 <- function() {
     scale_linetype_discrete(name = "", labels = c("non-sporulating cells", "purified spores"))
 
   plot_grid(PS2.A, PS2.B, nrow = 2, labels = c("A", "B"))
-  ggsave("suppl/Supplemental1.pdf", width = 8, height = 10, dpi = 300, units = "in")
+  ggsave("suppl/Supplemental1.png", width = 8, height = 10, dpi = 300, units = "in")
 
   # Figure 2, predicted means with pooled standard deviations
   FIG2.1 <- distr.values %>%
@@ -261,7 +251,7 @@ figure_2 <- function() {
     ylab("Difference spore/cell distributions") + scale_color_discrete(name = "") +
     scale_y_continuous(expand = c(0, 0)) +
     theme(legend.position = c(0.6, 0.8), axis.text.x = element_text(angle = 30, hjust = 1)) +
-    scale_x_discrete(label = c("SYBR1", "SYBR2", "PI", "FSC", "SSC"))
+    scale_x_discrete(label = c("SYBR1", "SYBR2", "FSC", "SSC"))
 
   # Figure 2, raw data panel
   f2.2 <- f2.df %>%
@@ -272,11 +262,10 @@ figure_2 <- function() {
     dplyr::select(-id)
 
   # translate so that cutoff is at 0
-  f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] - distr.values$cutoff[5]
-  f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] - distr.values$cutoff[8]
-  f2.2$asinh.FSC.A <- f2.2$asinh.FSC.A - distr.values$cutoff[10]
-  f2.2$asinh.SSC.A <- f2.2$asinh.SSC.A - distr.values$cutoff[11]
-  f2.2$asinh.FL3.A <- f2.2$asinh.FL3.A - distr.values$cutoff[2]
+  f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR1"] - distr.values$cutoff[2]
+  f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] <- f2.2$asinh.FL1.A[f2.2$type == "SYBR2"] - distr.values$cutoff[5]
+  f2.2$asinh.FSC.A <- f2.2$asinh.FSC.A - distr.values$cutoff[7]
+  f2.2$asinh.SSC.A <- f2.2$asinh.SSC.A - distr.values$cutoff[8]
 
   FIG2.2 <- f2.2 %>%
     gather("channel", "value", 4:7) %>%
@@ -285,7 +274,6 @@ figure_2 <- function() {
     dplyr::filter(channel %in% c(
       "asinh.FL1.A.SYBR1",
       "asinh.FL1.A.SYBR2",
-      "asinh.FL3.A.PI",
       "asinh.SSC.A.unstained",
       "asinh.FSC.A.unstained"
     )) %>%
@@ -381,7 +369,7 @@ figure_34 <- function() {
     scale_fill_viridis(guide = FALSE) +
     theme_bw()
 
-  ggsave("suppl/Supplemental_4.pdf", width = 4, height = 6)
+  ggsave("suppl/Supplemental_4.png", width = 4, height = 6)
 
   c.count.B <- clusterB.pred %>%
     group_by(strain, time, cluster, tripl) %>%
@@ -502,7 +490,7 @@ supplemental_2 <- function() {
     theme(legend.position = c(0.45, 0.97)) +
     facet_grid(. ~ channel)
 
-  ggsave("suppl/Supplemental_2.pdf", width = 10, height = 10)
+  ggsave("suppl/Supplemental_2.png", width = 10, height = 10)
 
   fcs.df2 <- fcs.df1 %>%
     group_by(type, stain, conc) %>%
