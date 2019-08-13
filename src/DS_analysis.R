@@ -58,6 +58,66 @@ distr.values <- lapply(models.list, function(x) {
 # %>%
 #       cbind(., cases) %>%
 #       separate(cases, into = c("type", "stain", "time", "z", "channel"))
-###########################################
-# PLUGGING MY DATA INOT FIGURE 2 ANALYSIS #
-###########################################
+#############################################
+# PLUGGING MY DATA INOT FIGURE 3,4 ANALYSIS #
+#############################################
+set.seed(1)
+sample.var <- c("host","media","time","dilution","well","phage","rep")
+fcsset3 <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x10/", sample_variables = sample.var, transformation = FALSE)
+fcsset3 <- Transform.Novocyte(fcsset3)
+
+df3 <- fcsset3 %>%
+      Subset(norm2Filter("asinh.FSC.H", "asinh.FSC.A", scale.factor = 2)) %>%
+      Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15))) %>%
+      flowFcsToDf(.)
+
+# Load reference containing all subpopulations
+df3.ref <- df3%>%
+      dplyr::filter(well=="C7")%>%
+      dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.BL1.A)%>%
+      as.matrix()
+df3.mix <- mclust::Mclust(data = df3.ref, G = 2) #I mostly have only 2 clusters
+
+
+# getting centers for visualization and export
+centers.list.df <- t(df3.mix$parameters$mean)
+# write.csv(centers.list.df, "suppl/centers_f3.csv")
+center.locs <- factor(df3.mix$classification, levels = c(1, 2))
+
+
+# Prediction for other cases
+cluster.predict <- df3 %>%
+      dplyr::select(asinh.FSC.A, asinh.SSC.A, asinh.BL1.A) %>%
+      predict.Mclust(df3.mix,.)
+
+
+p.ref <- 
+    data.frame(df3.ref, cluster = center.locs) %>%
+      ggplot(aes(asinh.SSC.A, asinh.BL1.A)) +
+      geom_hex(aes(fill = factor(cluster,levels=c(2,1,3))), bins = 300) + # ,alpha=..ncount.. #order= ?
+      geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+      xlim(c(5, 15)) + ylim(c(2.5, 15)) +
+      scale_fill_viridis(
+            discrete = TRUE, end = 0.8, label = c("Cells", "Forespores", "Spores"), name = "", direction = -1,
+            guide = FALSE
+      ) +
+      scale_alpha_continuous(guide = FALSE) +
+      theme_bw() +
+      geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
+      geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) 
+p <-       
+  data.frame(df3, cluster = cluster.predict$classification) %>%
+      ggplot(aes(asinh.SSC.A, asinh.BL1.A)) +
+      geom_hex(aes(fill = factor(cluster,levels=c(2,1,3))), bins = 300) + # ,alpha=..ncount.. #order= ?
+      geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+      xlim(c(5, 15)) + ylim(c(2.5, 15)) +
+      scale_fill_viridis(
+            discrete = TRUE, end = 0.8, label = c("Cells", "Forespores", "Spores"), name = "", direction = -1,
+            guide = FALSE
+      ) +
+      scale_alpha_continuous(guide = FALSE) +
+      theme_bw() +
+      geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
+      geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) +
+      facet_wrap(~well)
+ggsave("fig/DS_figures/first/plot.png", plot = p)
