@@ -20,19 +20,21 @@ fcsset.1 <- flowCreateFlowSet(
 fcsset.1 <- Transform.Novocyte(fcsset.1)
 
 
-f1.df <- fcsset.1 %>%
+full.df <- fcsset.1 %>%
       Subset(rectangleGate(
             "asinh.FSC.A" = c(0, 15),
             "asinh.SSC.A" = c(0, 15),
             "asinh.BL1.A" = c(0, 15)
-      )) %>%
-      Subset(., norm2Filter("FSC-H", "FSC-A", filterId = "norm_ssc.fsc", scale = 2)) %>%
+      )) 
+
+subset.df <- full.df %>%
+      Subset(. , norm2Filter("FSC-H", "FSC-A", filterId = "norm_ssc.fsc", scale = 2)) %>%
       flowFcsToDf(.) %>%
       # dplyr::filter(ident == "Cells+spores") %>%
       select(host,media,time,dilution,well,phage,rep, asinh.BL1.A, asinh.FSC.A, asinh.SSC.A) %>%
       gather("channel", "value", 8:10)
 
-models.list <- f1.df %>%
+models.list <- subset.df %>%
       split(x = ., interaction(.$host, .$media, .$time, .$dilution, .$well, .$phage, .$rep, .$channel)) %>%
       Filter(function(x) nrow(x) != 0, .) %>%
       lapply(., function(x) {
@@ -66,10 +68,36 @@ sample.var <- c("host","media","time","dilution","well","phage","rep")
 fcsset3 <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x10/", sample_variables = sample.var, transformation = FALSE)
 fcsset3 <- Transform.Novocyte(fcsset3)
 
-df3 <- fcsset3 %>%
-      Subset(norm2Filter("asinh.FSC.H", "asinh.FSC.A", scale.factor = 2)) %>%
-      Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15))) %>%
+sub.fcsset3 <- fcsset3 %>%
+      Subset(norm2Filter("asinh.FSC.H", "asinh.FSC.A", scale.factor = 6)) %>%
+      Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15)))
+
+df3 <- sub.fcsset3%>%
       flowFcsToDf(.)
+
+full.df3 <- fcsset3 %>%
+  flowFcsToDf(.)
+
+########
+#looking at the subsetting for singlets
+  # ggplot(df3, aes(asinh.SSC.A, asinh.BL1.A))+
+  ggplot(df3, aes(FSC.H, FSC.A))+
+  geom_density2d(data=full.df3, color="red")+
+    geom_density2d(color="blue")+
+    facet_wrap(~well)
+
+pt <- 
+  ggplot(df3, aes(FSC.H, FSC.A))+
+  geom_point(data=full.df3, color=rgb(1,0,0,0.5))+
+  geom_point(color=rgb(0,1,0,0.5))+
+  facet_wrap(~well)
+ggsave("fig/DS_figures/first/outlierTest_sf6.png",plot = pt)
+
+df3 %>%
+  ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
+  geom_density2d()+
+  facet_wrap(~well)
+######
 
 # Load reference containing all subpopulations
 df3.ref <- df3%>%
@@ -120,4 +148,12 @@ p <-
       geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
       geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) +
       facet_wrap(~well)
-ggsave("fig/DS_figures/first/plot.png", plot = p)
+ggsave("fig/DS_figures/first/plot_sf6.png", plot = p)
+
+#get the quantities
+c.count.B <- data.frame(df3, cluster = cluster.predict$classification) %>%
+      group_by(well, cluster) %>%
+      summarize(count = n()) %>%
+      mutate(perc.mean.count = 100 * count / sum(count), total=sum(count))
+
+
