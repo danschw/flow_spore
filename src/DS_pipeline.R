@@ -17,10 +17,10 @@ fcsset <- Transform.Novocyte(fcsset)
 n.sample <- nrow(fcsset@phenoData@data)
 
 for (i in 1:n.sample){
-      singlet_gate <- gate_singlet(fcsset[[i]], area = "FSC-A", height = "FSC-H", filterId = "Singlets",wider_gate = TRUE )
-      
+      singlet_gate <- gate_singlet(fcsset[[i]], area = "FSC-A", height = "FSC-H", filterId = "Singlets",wider_gate = FALSE )
+
       #plot gate
-      p.singlet <- 
+      p.singlet <-
             ggcyto(fcsset[[i]], aes(x = `FSC-A`, y =  `FSC-H`))+
             geom_hex(bins = 500)+
             geom_gate(singlet_gate)+
@@ -29,21 +29,41 @@ for (i in 1:n.sample){
       #save plot
       id <- fcsset[[i]]@description$GUID
       ggsave(paste0("fig/DS_figures/Singlet_gates/",id,".pdf" ), p.singlet)
-      
+
       #apply gate
       fcsset[[i]] <- fcsset[[i]] %>%
             Subset(singlet_gate)%>%
             Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15))) # remove negatives
-      
+
 }
+
+#### Gating for singlets with norm2Filter ####
+# df.set <- fcsset %>%
+#    Subset(norm2Filter("asinh.FSC.H", "asinh.FSC.A", scale.factor = 10)) %>%
+#    Subset(rectangleGate("asinh.BL1.A" = c(0, 15))) %>%
+#    flowFcsToDf(.)
+
+
+
+
+
+
+
+
+
+
 
 #### transform to dataframe ####
 df.set <- fcsset%>%
       flowFcsToDf(.)
 
+df.set %>%
+   group_by(well) %>%
+   summarise(events=n())
+
 # # plot
 df.set %>%
-      ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
+      ggplot(aes(asinh.FSC.A, asinh.BL1.A))+
       geom_hex(bins=50)#+
 #       facet_wrap(~well)
 
@@ -56,8 +76,7 @@ df.set %>%
 
 df.mix <- df.set%>%
       # dplyr::filter(phage=="noPHI")%>%
-      # dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.BL1.A)%>%
-      dplyr::select(asinh.SSC.A,asinh.BL1.A)%>%
+      dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.BL1.A)%>%
       as.matrix() %>%
       mclust::Mclust(data = ., G = 2) #I  have only 2 clusters
 
@@ -101,11 +120,13 @@ p <-
    #    guide = FALSE
    # ) +
    # scale_alpha_continuous(guide = FALSE) +
-   theme_bw() +
+   theme_bw()+ 
    geom_point(aes(centers.list.df[1, 1], centers.list.df[1, 2]), col = "blue", size = 1) +
    geom_point(aes(centers.list.df[2, 1], centers.list.df[2, 2]), col = "blue", size = 1) +
-   facet_wrap(~well)
-ggsave("fig/DS_figures/first/plot_statsGate_2clust_bySSC.png", plot = p)
+   geom_point(aes(centers.list.df[3, 1], centers.list.df[3, 2]), col = "blue", size = 1) 
+# +
+#    facet_wrap(~well)
+ggsave("fig/DS_figures/first/R1_3clust.png", plot = p)
 
 
 #### Get the quantities ####
