@@ -37,4 +37,79 @@ for (i in 1:n.sample){
       
 }
 
+#### transform to dataframe ####
+df.set <- fcsset%>%
+      flowFcsToDf(.)
 
+# # plot
+df.set %>%
+      ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
+      geom_hex(bins=50)#+
+#       facet_wrap(~well)
+
+#### predict centers of sub-populations ####
+
+# Load reference containing all subpopulations
+# I will use no phage triplicate
+
+
+
+df.mix <- df.set%>%
+      # dplyr::filter(phage=="noPHI")%>%
+      # dplyr::select(asinh.FSC.A,asinh.SSC.A,asinh.BL1.A)%>%
+      dplyr::select(asinh.SSC.A,asinh.BL1.A)%>%
+      as.matrix() %>%
+      mclust::Mclust(data = ., G = 2) #I  have only 2 clusters
+
+# getting centers for visualization and export
+centers.list.df <- t(df.mix$parameters$mean)
+center.locs <- factor(df.mix$classification, levels = c(1, 2))
+
+### Prediction of clusters for all samples ####
+cluster.predict <- df.set %>%
+      dplyr::select(asinh.FSC.A, asinh.SSC.A, asinh.BL1.A) %>%
+      predict.Mclust(df.mix,.)
+
+
+
+# p <-       
+#    data.frame(df.set, cluster = cluster.predict$classification) %>%
+#    ggplot(aes(asinh.SSC.A, asinh.BL1.A)) +
+#    geom_hex(aes(fill = factor(cluster,levels=c(2,1))), bins = 300) + # ,alpha=..ncount.. #order= ?
+#    geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+#    xlim(c(5, 15)) + ylim(c(2.5, 15)) +
+#    scale_fill_viridis(
+#       discrete = TRUE, end = 0.8, label = c("Cells", "Spores"), name = "", direction = -1,
+#       guide = FALSE
+#    ) +
+#    scale_alpha_continuous(guide = FALSE) +
+#    theme_bw() +
+#    geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
+#    geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) +
+#    facet_wrap(~well)
+# ggsave("fig/DS_figures/first/plot_statsGate.png", plot = p)
+
+
+p <-       
+   data.frame(df.set, cluster = cluster.predict$classification) %>%
+   ggplot(aes(asinh.SSC.A, asinh.BL1.A)) +
+   geom_hex(aes(fill = factor(cluster,levels=c(2,1))), bins = 300) + # ,alpha=..ncount.. #order= ?
+   # geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+   # xlim(c(5, 15)) + ylim(c(2.5, 15)) +
+   # scale_fill_viridis(
+   #    discrete = TRUE, end = 0.8, label = c("Cells", "Spores"), name = "", direction = -1,
+   #    guide = FALSE
+   # ) +
+   # scale_alpha_continuous(guide = FALSE) +
+   theme_bw() +
+   geom_point(aes(centers.list.df[1, 1], centers.list.df[1, 2]), col = "blue", size = 1) +
+   geom_point(aes(centers.list.df[2, 1], centers.list.df[2, 2]), col = "blue", size = 1) +
+   facet_wrap(~well)
+ggsave("fig/DS_figures/first/plot_statsGate_2clust_bySSC.png", plot = p)
+
+
+#### Get the quantities ####
+clust.count <- data.frame(df.set, cluster = cluster.predict$classification) %>%
+   group_by(well, cluster) %>%
+   summarize(count = n()) %>%
+   mutate(perc.mean.count = 100 * count / sum(count), total=sum(count))
