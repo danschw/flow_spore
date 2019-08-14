@@ -1,3 +1,10 @@
+# Additional Packages
+if(!require(flowStats)){
+      BiocManager::install("flowStats")  
+}
+library(flowStats) 
+
+
 # additional functions for adapting analysis for my data
 
 Transform.Novocyte <- function(fcsset){

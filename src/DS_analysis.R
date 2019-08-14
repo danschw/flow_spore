@@ -1,4 +1,4 @@
-#analysis of SP-10 entrap,ent experiment using Karava's analysis.R as reference.
+#analysis of SP-10 entrapment experiment using Karava's analysis.R as reference.
 rm(list=ls())
 source("src/functions.R")
 source("src/DS_functions.R")
@@ -68,14 +68,33 @@ sample.var <- c("host","media","time","dilution","well","phage","rep")
 fcsset3 <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x10/", sample_variables = sample.var, transformation = FALSE)
 fcsset3 <- Transform.Novocyte(fcsset3)
 
-sub.fcsset3 <- fcsset3 %>%
-      Subset(norm2Filter("asinh.FSC.H", "asinh.FSC.A", scale.factor = 6)) %>%
-      Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15)))
+#### gating for singlets with flowStats ####
 
-df3 <- sub.fcsset3%>%
+singlet_gate <- gate_singlet(fcsset3[[8]], area = "FSC-A", height = "FSC-H", filterId = "Singlets",wider_gate = TRUE )
+# #plot gate
+# ggcyto(fcsset3[[8]], aes(x = `FSC-A`, y =  `FSC-H`))+
+#  geom_hex(bins = 1000)+
+#   geom_gate(singlet_gate)+
+#   geom_stats(type = c("gate_name", "percent"))
+# # looks preety good
+
+#apply gate
+sub.fcsset3.8 <- fcsset3[[8]] %>%
+  Subset(singlet_gate)%>%
+  Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15))) # remove negatives
+
+# #plot subset
+# ggcyto(sub.fcsset3.8, aes(x = `FSC-A`, y =  `FSC-H`))+
+#   geom_hex(bins = 1000)
+# 
+# ggcyto(sub.fcsset3.8, aes(x =  asinh.FSC.A, y = asinh.BL1.A))+
+#   geom_hex(bins = 1000)
+
+
+df3 <- flowSet(sub.fcsset3.8)%>%
       flowFcsToDf(.)
 
-full.df3 <- fcsset3 %>%
+full.df3 <- flowSet(fcsset3[[8]]) %>%
   flowFcsToDf(.)
 
 ########
@@ -83,20 +102,21 @@ full.df3 <- fcsset3 %>%
   # ggplot(df3, aes(asinh.SSC.A, asinh.BL1.A))+
   ggplot(df3, aes(FSC.H, FSC.A))+
   geom_density2d(data=full.df3, color="red")+
-    geom_density2d(color="blue")+
-    facet_wrap(~well)
+    geom_density2d(color="blue")#+
+    # facet_wrap(~well)
 
 pt <- 
-  ggplot(df3, aes(FSC.H, FSC.A))+
-  geom_point(data=full.df3, color=rgb(1,0,0,0.5))+
-  geom_point(color=rgb(0,1,0,0.5))+
-  facet_wrap(~well)
-ggsave("fig/DS_figures/first/outlierTest_sf6.png",plot = pt)
+  ggplot(df3, aes(FSC.A, FSC.H))+
+  geom_point(data=full.df3, color=rgb(1,0,0,0.5), size=0.1)+
+  geom_point(color=rgb(0,1,0,0.5),size=0.1)#+
+  # facet_wrap(~well)
+ggsave("fig/DS_figures/first/singletGate.png",plot = pt)
 
 df3 %>%
   ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
-  geom_density2d()+
-  facet_wrap(~well)
+  geom_hex(bins=256)
+# +
+#   facet_wrap(~well)
 ######
 
 # Load reference containing all subpopulations
