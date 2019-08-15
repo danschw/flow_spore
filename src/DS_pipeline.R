@@ -6,7 +6,7 @@ source("src/DS_functions.R")
 #### Load data, sample set ####
 set.seed(1)
 sample.var <- c("host","media","time","dilution","well","phage","rep")
-fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/W23_LB_T0_x10/", sample_variables = sample.var, transformation = FALSE)
+fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x10/", sample_variables = sample.var, transformation = FALSE)
 #transform with arcsine, recpmendded by Karava et al.
 fcsset <- Transform.Novocyte(fcsset)
 
@@ -15,21 +15,32 @@ fcsset <- Transform.Novocyte(fcsset)
 # The gate function needs to be applied to each sample seperatly
 # get number of samples
 n.sample <- nrow(fcsset@phenoData@data)
+
+# initialise daaframe to store noise cutoff values
 noise.fsc <- data.frame(sample=fcsset@phenoData@data$name,well=fcsset@phenoData@data$well,cutoff=rep(NA,n.sample))
+
+#initialise list to store singlet plots
+plot.list <- vector('list', n.sample)
+
 for (i in 1:n.sample){
       singlet_gate <- gate_singlet(fcsset[[i]], area = "FSC-A", height = "FSC-H", filterId = "Singlets",wider_gate = TRUE )
 
       #plot gate
-      p.singlet <-
-            ggcyto(fcsset[[i]], aes(x = `FSC-A`, y =  `FSC-H`))+
-            geom_hex(bins = 500)+
-            geom_gate(singlet_gate)+
-            geom_stats()+
-            ggtitle("Singlets")
-      #save plot
       id <- fcsset[[i]]@description$GUID
-      ggsave(paste0("fig/DS_figures/Singlet_gates/",id,".pdf" ), p.singlet)
+      plot.list[[i]] <-
+         as.ggplot(
+            ggcyto(fcsset[[i]], aes(x = `FSC-A`, y =  `FSC-H`))+
+               geom_hex(bins = 500)+
+               geom_gate(singlet_gate, size=0.01)+
+               geom_stats()+
+               theme_cowplot(font_size = 5)+
+               scale_y_continuous(labels =  function(x) format(x, scientific = TRUE))+
+               scale_x_continuous(labels =  function(x) format(x, scientific = TRUE))+
+               facet_null()+
+               ggtitle(fcsset[[i]]@description$`$WELLID`)
+            )
 
+   
       #apply gate
       fcsset[[i]] <- fcsset[[i]] %>%
             Subset(singlet_gate)%>%
@@ -40,6 +51,10 @@ for (i in 1:n.sample){
       noise.fsc$cutoff[i] <- noise@min[[1]]
 
 }
+
+#save plot
+ggsave2(paste0("fig/DS_figures/Singlet_gates/",fcsset[[i]]@description$`$SRC`,".pdf" ), plot_grid(plotlist = plot.list))
+
 
 #### Gating for singlets with norm2Filter ####
 # df.set <- fcsset %>%
