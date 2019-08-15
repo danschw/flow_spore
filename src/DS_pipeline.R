@@ -6,9 +6,22 @@ source("src/DS_functions.R")
 #### Load data, sample set ####
 set.seed(1)
 sample.var <- c("host","media","time","dilution","well","phage","rep")
-fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x10/", sample_variables = sample.var, transformation = FALSE)
+fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x100/", sample_variables = sample.var, transformation = FALSE)
 #transform with arcsine, recpmendded by Karava et al.
 fcsset <- Transform.Novocyte(fcsset)
+
+#data frame to collect stats
+df.stats <- fcsset%>%
+   flowFcsToDf(.)%>%
+   select(.,sample.var)%>%
+   distinct()
+df.stats$total.events <- NA
+df.stats$volume.nL <- NA
+df.stats$limit.events <- NA
+df.stats$limit.volume.uL <- NA
+df.stats$singlets <- NA
+df.stats$neg.rmv <- NA
+df.stats$noise.cutoff <- NA
 
 #### Gating for singlets with flowStats ####
 
@@ -16,14 +29,21 @@ fcsset <- Transform.Novocyte(fcsset)
 # get number of samples
 n.sample <- nrow(fcsset@phenoData@data)
 
-# initialise daaframe to store noise cutoff values
-noise.fsc <- data.frame(sample=fcsset@phenoData@data$name,well=fcsset@phenoData@data$well,cutoff=rep(NA,n.sample))
+
 
 #initialise list to store singlet plots
 plot.list <- vector('list', n.sample)
 
 for (i in 1:n.sample){
+   # collect metadata for stats table
+   df.stats$volume.nL[i] <- as.numeric(fcsset[[i]]@description$`$VOL`)
+   df.stats$total.events[i] <- as.numeric(fcsset[[i]]@description$`$TOT`)
+   df.stats$limit.volume.uL[i] <- as.numeric(fcsset[[i]]@description$`#NCVolumeLimits`)
+   df.stats$limit.events[i] <- as.numeric(fcsset[[i]]@description$`#NCEventsLimits`)
+   
+
       singlet_gate <- gate_singlet(fcsset[[i]], area = "FSC-A", height = "FSC-H", filterId = "Singlets",wider_gate = TRUE )
+      df.stats$singlets[i] <- summary(filter(fcsset[[i]],singlet_gate))@true
 
       #plot gate
       id <- fcsset[[i]]@description$GUID
@@ -40,20 +60,26 @@ for (i in 1:n.sample){
                ggtitle(fcsset[[i]]@description$`$WELLID`)
             )
 
-   
       #apply gate
       fcsset[[i]] <- fcsset[[i]] %>%
-            Subset(singlet_gate)%>%
-            Subset(rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15),"asinh.SSC.A" = c(0, 15))) # remove negatives
-
-      #remove noise by FSC
+            Subset(singlet_gate)
+      
+      
+      # filter negatives
+      neg.gate <- rectangleGate("asinh.BL1.A" = c(0, 15), "asinh.FSC.A" = c(0, 15),"asinh.SSC.A" = c(0, 15))
+      df.stats$neg.rmv[i] <-  df.stats$singlets[i]- summary(filter(fcsset[[i]],neg.gate))@true
+      #apply gate
+      fcsset[[i]] <- fcsset[[i]] %>%
+         Subset(neg.gate) # remove negative
+      
+      #find cutoff to remove noise by FSC
       noise<- rangeGate(x = fcsset[[i]], "asinh.FSC.A", absolute = F)
-      noise.fsc$cutoff[i] <- noise@min[[1]]
+      df.stats$noise.cutoff[i] <- noise@min[[1]]
 
 }
 
 #save plot
-ggsave2(paste0("fig/DS_figures/Singlet_gates/",fcsset[[i]]@description$`$SRC`,".pdf" ), plot_grid(plotlist = plot.list))
+ggsave2(paste0("fig/DS_figures/gate_plots/singlet_",fcsset[[i]]@description$`$SRC`,".pdf" ), plot_grid(plotlist = plot.list))
 
 
 #### Gating for singlets with norm2Filter ####
@@ -67,45 +93,51 @@ ggsave2(paste0("fig/DS_figures/Singlet_gates/",fcsset[[i]]@description$`$SRC`,".
 noise.plot <-   
 ggcyto(fcsset,aes(asinh.FSC.A))+
    geom_density()+
-   geom_vline(data = noise.fsc, aes(xintercept=cutoff), color="red")+
+   geom_vline(data = df.stats, aes(xintercept=noise.cutoff), color="red")+
    facet_wrap(~well)+theme_cowplot()
 
-ggsave2("fig/DS_figures/gates/noise.PDF", noise.plot)
+ggsave2(paste0("fig/DS_figures/gate_plots/noise_",fcsset[[i]]@description$`$SRC`,".pdf"), noise.plot)
 
 
 #### transform to dataframe ####
 df.set <- fcsset%>%
       flowFcsToDf(.)
+# no. of events before noise filter
+df.stats <- 
+   df.set %>%
+      group_by(well) %>%
+      summarise(noisy.events=n())%>%
+      full_join(df.stats,.)
 
-df.set %>%
-   group_by(well) %>%
-   summarise(events=n())
-
-# # plot
-df.set %>%
-      ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
-      geom_hex(bins=500)+
-      facet_wrap(~well)
+# # # plot
+# df.set %>%
+#       ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
+#       geom_hex(bins=500)+
+#       facet_wrap(~well)
 
 clean.df <- df.set[0,]
 
 # remove noise
-wells <- levels(as.factor(df.set$well))
+wells <- levels(as.factor(df.stats$well))
 for (wl in wells){
    clean.df <- rbind(clean.df,
    df.set %>%
-      filter(well==wl)%>%
-      filter(asinh.FSC.A>noise.fsc$cutoff[noise.fsc$well==wl]))
+      dplyr::filter(well==wl)%>%
+      dplyr::filter(asinh.FSC.A>df.stats$noise.cutoff[df.stats$well==wl]))
 }
 
-clean.df%>%
-   ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
-   geom_hex(bins=500)+
-   facet_wrap(~well)
+# clean.df%>%
+#    ggplot(aes(asinh.SSC.A, asinh.BL1.A))+
+#    geom_hex(bins=500)+
+#    facet_wrap(~well)
 
-clean.df %>%
-   group_by(well) %>%
-   summarise(events=n(), perc=100*n()/5e4)
+
+
+df.stats <- 
+   clean.df %>%
+      group_by(well) %>%
+      summarise(clean.events=n())%>%
+      full_join(df.stats,.)
 
 complot <- 
    ggplot(df.set, aes(asinh.SSC.A, asinh.BL1.A))+
@@ -113,7 +145,7 @@ complot <-
    geom_point(data=clean.df,size=0.1, color="blue")+
    facet_wrap(~well)
 
-ggsave2("fig/DS_figures/gates/com_noise.PNG", complot)
+ggsave2(paste0("fig/DS_figures/gate_plots/scatterNoise_",fcsset[[i]]@description$`$SRC`,".png"), complot)
 #### predict centers of sub-populations ####
 
 # Load reference containing all subpopulations
@@ -172,7 +204,7 @@ p <-
    geom_point(aes(centers.list.df[1, 1], centers.list.df[1, 2]), col = "blue", size = 1) +
    geom_point(aes(centers.list.df[2, 1], centers.list.df[2, 2]), col = "blue", size = 1) +
    facet_wrap(~well)
-ggsave("fig/DS_figures/gates/clust.png", plot = p)
+ggsave(paste0("fig/DS_figures/gate_plots/cluster_",fcsset[[i]]@description$`$SRC`,".png"), plot = p)
 
 
 #### Get the quantities ####
@@ -180,3 +212,4 @@ clust.count <- data.frame(clean.df, cluster = cluster.predict$classification) %>
    group_by(well, cluster) %>%
    summarize(count = n()) %>%
    mutate(perc.mean.count = 100 * count / sum(count), total=sum(count))
+   # spread(clust.count[,c("well","cluster","count")],key = "cluster", value = "clust.events",c("cluster","count"))
