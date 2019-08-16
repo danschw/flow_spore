@@ -2,13 +2,17 @@
 rm(list=ls())
 source("src/functions.R")
 source("src/DS_functions.R")
-
-#choose data
-
-#### Load data, sample set ####
 set.seed(1)
+#choose data
+folders <- 
+list.dirs("data/entrap_data/day3/",  full.names = T)[-1]
+
+for (folder in folders){
+#### Load data, sample set ####
+
+
 sample.var <- c("host","media","time","dilution","well","phage","rep") 
-fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T5_x100/", sample_variables = sample.var, transformation = FALSE)
+fcsset <- flowCreateFlowSet(filepath = folder, sample_variables = sample.var, transformation = FALSE)
 #transform with arcsine, recpmendded by Karava et al.
 fcsset <- Transform.Novocyte(fcsset)
 
@@ -226,3 +230,4 @@ df.stats$veg.ml <- as.numeric(sapply(strsplit(df.stats$dilution,"x"), "[[", 2))*
 write_csv(df.stats,paste0("data/entrap_data/output/",fcsset[[i]]@description$`$SRC`,".csv"))
   
 
+} #folder loop
