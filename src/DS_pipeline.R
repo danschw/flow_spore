@@ -8,7 +8,7 @@ source("src/DS_functions.R")
 #### Load data, sample set ####
 set.seed(1)
 sample.var <- c("host","media","time","dilution","well","phage","rep") 
-fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_LB_T0_x100/", sample_variables = sample.var, transformation = FALSE)
+fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T5_x100/", sample_variables = sample.var, transformation = FALSE)
 #transform with arcsine, recpmendded by Karava et al.
 fcsset <- Transform.Novocyte(fcsset)
 
@@ -59,7 +59,8 @@ for (i in 1:n.sample){
                scale_y_continuous(labels =  function(x) format(x, scientific = TRUE))+
                scale_x_continuous(labels =  function(x) format(x, scientific = TRUE))+
                facet_null()+
-               ggtitle(fcsset[[i]]@description$`$WELLID`)
+               ggtitle(df.stats$well[i])
+
             )
 
       #apply gate
@@ -145,6 +146,8 @@ complot <-
    ggplot(df.set, aes(asinh.SSC.A, asinh.BL1.A))+
    geom_point(size=0.1, color="grey")+
    geom_point(data=clean.df,size=0.1, color="blue")+
+   geom_density2d(col = "white",  size = 0.1, alpha = 0.5) +
+   scale_alpha_continuous(guide = FALSE) +
    facet_wrap(~well)
 
 ggsave2(paste0("fig/DS_figures/gate_plots/scatterNoise_",fcsset[[i]]@description$`$SRC`,".png"), complot)
@@ -179,37 +182,21 @@ cluster.predict <- clean.df %>%
       dplyr::select( asinh.FSC.A, asinh.BL1.A) %>%
       predict.Mclust(df.mix,.)
 
+clean.df$pop <- sapply(cluster.predict$classification,  function(x) {ifelse(x==pop.tbl$cluster[1], pop.tbl$pop[1],pop.tbl$pop[2])})
 
-
-# p <-       
-#    data.frame(df.set, cluster = cluster.predict$classification) %>%
-#    ggplot(aes(asinh.SSC.A, asinh.BL1.A)) +
-#    geom_hex(aes(fill = factor(cluster,levels=c(2,1))), bins = 300) + # ,alpha=..ncount.. #order= ?
-#    geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
-#    xlim(c(5, 15)) + ylim(c(2.5, 15)) +
-#    scale_fill_viridis(
-#       discrete = TRUE, end = 0.8, label = c("Cells", "Spores"), name = "", direction = -1,
-#       guide = FALSE
-#    ) +
-#    scale_alpha_continuous(guide = FALSE) +
-#    theme_bw() +
-#    geom_point(aes(centers.list.df[1, 2], centers.list.df[1, 3]), col = "blue", size = 1) +
-#    geom_point(aes(centers.list.df[2, 2], centers.list.df[2, 3]), col = "blue", size = 1) +
-#    facet_wrap(~well)
-# ggsave("fig/DS_figures/first/plot_statsGate.png", plot = p)
 
 
 p <-       
-   data.frame(clean.df, cluster = cluster.predict$classification) %>%
-   ggplot(aes(asinh.FSC.A, asinh.BL1.A)) +
-   geom_hex(aes(fill = factor(cluster,levels=c(2,1))), bins = 300) + # ,alpha=..ncount.. #order= ?
-   # geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
+   # data.frame(clean.df, cluster = cluster.predict$classification) %>%
+   ggplot(clean.df, aes(asinh.FSC.A, asinh.BL1.A)) +
+   geom_hex(aes(fill = pop), bins = 300) + # ,alpha=..ncount.. #order= ?
+   geom_density2d(color="black",  size = 0.1) +
    # xlim(c(5, 15)) + ylim(c(2.5, 15)) +
-   scale_fill_viridis(
-      discrete = TRUE, end = 0.8, name = "", direction = -1,
-      guide = FALSE
-   ) +
-   scale_alpha_continuous(guide = FALSE) +
+   # scale_fill_viridis(
+   #    discrete = TRUE, end = 0.8, name = "", direction = -1,
+   #    guide = FALSE, option = 'C'
+   # ) +
+   # scale_alpha_continuous(guide = FALSE) +
    theme_bw()+ 
    geom_point(aes(centers.list.df[1, 1], centers.list.df[1, 2]), col = "blue", size = 1) +
    geom_point(aes(centers.list.df[2, 1], centers.list.df[2, 2]), col = "blue", size = 1) +
