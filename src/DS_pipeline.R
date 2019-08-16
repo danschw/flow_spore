@@ -3,10 +3,12 @@ rm(list=ls())
 source("src/functions.R")
 source("src/DS_functions.R")
 
+#choose data
+
 #### Load data, sample set ####
 set.seed(1)
-sample.var <- c("host","media","time","dilution","well","phage","rep")
-fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_DSM_T4_x100/", sample_variables = sample.var, transformation = FALSE)
+sample.var <- c("host","media","time","dilution","well","phage","rep") 
+fcsset <- flowCreateFlowSet(filepath = "data/entrap_data/day1/delta6_LB_T0_x100/", sample_variables = sample.var, transformation = FALSE)
 #transform with arcsine, recpmendded by Karava et al.
 fcsset <- Transform.Novocyte(fcsset)
 
@@ -92,7 +94,7 @@ ggsave2(paste0("fig/DS_figures/gate_plots/singlet_",fcsset[[i]]@description$`$SR
 
 noise.plot <-   
 ggcyto(fcsset,aes(asinh.FSC.A))+
-   geom_density()+
+   geom_density(fill="grey80")+
    geom_vline(data = df.stats, aes(xintercept=noise.cutoff), color="red")+
    facet_wrap(~well)+theme_cowplot()
 
@@ -149,20 +151,28 @@ ggsave2(paste0("fig/DS_figures/gate_plots/scatterNoise_",fcsset[[i]]@description
 #### predict centers of sub-populations ####
 
 # Load reference containing all subpopulations
-# I will use no phage triplicate
-
-df.mix <- clean.df%>%
-      dplyr::filter(phage=="noPHI")%>%
-      dplyr::select(asinh.FSC.A,asinh.BL1.A)%>%
-      as.matrix() %>%
-      mclust::Mclust(data = ., G = 2) #I  have only 2 clusters
+# I pre-compiled a model using no phage triplicate in delta6_DSM_T4_x10
+load("data/entrap_data/delta6_cluster_model.Rdata")
+# # use this to generate prediction model from data frame
+# df.mix <- clean.df%>%
+#       dplyr::filter(phage=="noPHI")%>%
+#       dplyr::select(asinh.FSC.A,asinh.BL1.A)%>%
+#       as.matrix() %>%
+#       mclust::Mclust(data = ., G = 2) #I  have only 2 clusters
+# ##save(df.mix, file="data/entrap_data/delta6_cluster_model.Rdata")
 
 
 
 
 # getting centers for visualization and export
 centers.list.df <- t(df.mix$parameters$mean)
-center.locs <- factor(df.mix$classification, levels = c(1, 2))
+# center.locs <- factor(df.mix$classification, levels = c(1, 2))
+
+# assigning cluster to population based on SYBR fluoresence (BL1)
+# higher SYBR => veg cell
+pop.tbl <- data.frame(cluster=c(1,2), pop=NA)
+pop.tbl$pop[which.max(centers.list.df[,"asinh.BL1.A"])] <- "veg"
+pop.tbl$pop[which.min(centers.list.df[,"asinh.BL1.A"])] <- "spore"
 
 ### Prediction of clusters for all samples ####
 cluster.predict <- clean.df %>%
@@ -195,11 +205,11 @@ p <-
    geom_hex(aes(fill = factor(cluster,levels=c(2,1))), bins = 300) + # ,alpha=..ncount.. #order= ?
    # geom_density2d(col = "red", bins = 20, size = 0.5, alpha = 0.7) +
    # xlim(c(5, 15)) + ylim(c(2.5, 15)) +
-   # scale_fill_viridis(
-   #    discrete = TRUE, end = 0.8, label = c("Cells", "Spores"), name = "", direction = -1,
-   #    guide = FALSE
-   # ) +
-   # scale_alpha_continuous(guide = FALSE) +
+   scale_fill_viridis(
+      discrete = TRUE, end = 0.8, name = "", direction = -1,
+      guide = FALSE
+   ) +
+   scale_alpha_continuous(guide = FALSE) +
    theme_bw()+ 
    geom_point(aes(centers.list.df[1, 1], centers.list.df[1, 2]), col = "blue", size = 1) +
    geom_point(aes(centers.list.df[2, 1], centers.list.df[2, 2]), col = "blue", size = 1) +
@@ -210,6 +220,22 @@ ggsave(paste0("fig/DS_figures/gate_plots/cluster_",fcsset[[i]]@description$`$SRC
 #### Get the quantities ####
 clust.count <- data.frame(clean.df, cluster = cluster.predict$classification) %>%
    group_by(well, cluster) %>%
-   summarize(count = n()) %>%
-   mutate(perc.mean.count = 100 * count / sum(count), total=sum(count))
-   # spread(clust.count[,c("well","cluster","count")],key = "cluster", value = "clust.events",c("cluster","count"))
+   summarize(count = n()) 
+for(i in pop.tbl$cluster){
+   clust.count$cluster[clust.count$cluster %in%  pop.tbl$cluster[i]] <-  pop.tbl$pop[i]
+}
+
+df.stats <-    
+   spread(clust.count ,cluster, count)%>%
+   full_join(df.stats,.)
+   
+# calculate concentrations based on volume and dilution
+df.stats$spore.ml <- as.numeric(sapply(strsplit(df.stats$dilution,"x"), "[[", 2))* #dilution factor
+                     df.stats$spore/(df.stats$volume.nL/1e6)
+df.stats$veg.ml <- as.numeric(sapply(strsplit(df.stats$dilution,"x"), "[[", 2))* #dilution factor
+   df.stats$veg/(df.stats$volume.nL/1e6)  
+
+# write results to file
+write_csv(df.stats,paste0("data/entrap_data/output/",fcsset[[i]]@description$`$SRC`,".csv"))
+  
+
