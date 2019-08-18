@@ -41,3 +41,44 @@ filter(d, host=="delta6")%>%
             
 ```
 
+```{r}
+filter(d, host=="delta6")%>%
+      filter(media=="DSM")%>%
+      # filter(veg>1000)%>%
+      ggplot(aes(x=phage, y=veg.ml))+
+            geom_jitter(aes(shape=rep, color=time), width=.2, height = 0)+
+            scale_y_log10()+
+            facet_grid(day~dilution)
+            
+```
+
+```{r}
+filter(d, host=="delta6")%>%
+      filter(media=="LB")%>%
+      filter(dilution=="x100")%>%
+      ggplot(aes(x=phage, y=spore.ml))+
+            geom_jitter(aes(shape=rep, color=time), width=.2, height = 0)+
+            scale_y_log10()+
+            facet_grid(day~dilution)
+
+filter(d, host=="delta6")%>%
+      filter(media=="LB")%>%
+      filter(dilution=="x100")%>%
+      ggplot(aes(x=phage, y=veg.ml))+
+            geom_jitter(aes(shape=rep, color=time), width=.2, height = 0)+
+            scale_y_log10()+
+            facet_grid(day~dilution)
+            
+```
+
+```{r}
+filter(d, host=="delta6")%>%
+      filter(media=="DSM")%>%
+   gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
+      # filter(veg>1000)%>%
+      ggplot(aes(x=interaction(phage,time,rep), y=cell.ml))+
+            geom_bar(aes(fill=pop), stat = "identity")+
+            scale_y_log10()+
+            facet_grid(day~dilution)
+            
+```
