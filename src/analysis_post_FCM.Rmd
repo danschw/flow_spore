@@ -1,0 +1,43 @@
+---
+title: "analysis of processed FCM data from SP10 entrapment assay"
+output: html_notebook
+---
+
+```{r}
+# clear environment
+rm(list = ls())
+library(tidyverse)
+```
+
+I first need to collect all the data from the cluster pipeline.
+* currently only delta6 on DSM is really well clustered
+* delta6 on LB is OK in x100
+* W23 data is incorrect
+
+I will first collect it all and then fikter out the good data.
+```{r, include=FALSE}
+# get all the file names to collect
+files <- list.files("../data/entrap_data/output/", recursive = TRUE, full.names = TRUE)
+d <- data.frame()
+
+for (f in files){
+      #get the day from file name
+      day <- parse_number(gsub(".*day","",f))
+      tmp <- read_csv(f)
+      tmp$day <- day
+      d <- rbind(d, tmp)
+}
+rm (tmp)
+
+```
+
+
+```{r}
+filter(d, host=="delta6")%>%
+      filter(media=="DSM")%>%
+      ggplot(aes(x=phage, y=spore.ml))+
+            geom_point(aes(shape=rep, color=time))+
+            facet_grid(day~dilution)
+            
+```
+
