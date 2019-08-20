@@ -1,12 +1,15 @@
 ---
 title: "analysis of processed FCM data from SP10 entrapment assay"
 output: html_notebook
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r}
 # clear environment
 rm(list = ls())
 library(tidyverse)
+library(cowplot)
 ```
 
 I first need to collect all the data from the cluster pipeline.
@@ -31,13 +34,30 @@ rm (tmp)
 
 ```
 
+Compare x10 dilution to x100 dilution. Should be 1:1.  
+```{r}
+d%>%
+   select("day","host","phage","rep","media","time","dilution", "spore.ml","veg.ml")%>%
+   gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
+   spread(dilution,cell.ml)%>%
+   ggplot(aes(x=x10, y=x100))+
+      geom_abline(intercept = 0,slope = 1, color="grey")+
+      geom_point(aes(color=phage),shape=21)+
+      theme_cowplot()+
+   scale_y_log10()+scale_x_log10()+
+   facet_wrap(host~media)
 
+
+```
+
+Overall for delta 6 the numbers ar close to 1:1.  
 ```{r}
 filter(d, host=="delta6")%>%
       filter(media=="DSM")%>%
       ggplot(aes(x=phage, y=spore.ml))+
             geom_point(aes(shape=rep, color=time))+
-            facet_grid(day~dilution)
+            facet_grid(day~dilution)+
+   theme_cowplot()
             
 ```
 
@@ -48,7 +68,8 @@ filter(d, host=="delta6")%>%
       ggplot(aes(x=phage, y=veg.ml))+
             geom_jitter(aes(shape=rep, color=time), width=.2, height = 0)+
             scale_y_log10()+
-            facet_grid(day~dilution)
+            facet_grid(day~dilution)+
+   theme_cowplot()
             
 ```
 
@@ -67,18 +88,69 @@ filter(d, host=="delta6")%>%
       ggplot(aes(x=phage, y=veg.ml))+
             geom_jitter(aes(shape=rep, color=time), width=.2, height = 0)+
             scale_y_log10()+
-            facet_grid(day~dilution)
+            facet_grid(day~dilution)+
+   theme_cowplot()
             
 ```
 
 ```{r}
-filter(d, host=="delta6")%>%
-      filter(media=="DSM")%>%
-   gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
-      # filter(veg>1000)%>%
-      ggplot(aes(x=interaction(phage,time,rep), y=cell.ml))+
-            geom_bar(aes(fill=pop), stat = "identity")+
-            scale_y_log10()+
-            facet_grid(day~dilution)
+# filter(d, host=="delta6")%>%
+#       filter(media=="DSM")%>%
+#    filter(time=="T4")%>%
+#    gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
+#       # filter(veg>1000)%>%
+#       ggplot(aes(x=interaction(rep,phage), y=log10(cell.ml)))+
+#             geom_bar(aes(fill=pop), stat = "identity")+
+#             # scale_y_log10()+
+#             facet_grid(dilution~day)+
+#    coord_flip()
             
 ```
+
+# looking at change across days
+```{r}
+
+d%>%
+   filter(host=="delta6")%>%
+   filter(media=="DSM")%>%
+   filter(time=="T4")%>%
+   gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
+   ggplot(aes(x=day, y=cell.ml))+
+      geom_line(aes(color=pop, linetype=rep))+
+      scale_y_log10()+
+      facet_grid(dilution~phage)+
+   theme_cowplot()
+```
+
+#summary stats
+
+I will start with delta6 on DSM using the data from x10 dilution and summarizing over biologival replicates.  
+```{r}
+
+d%>%
+   filter(media=="DSM")%>%
+   filter(host=="delta6")%>%
+   filter(dilution=="x10")%>%
+   gather(key="pop", value = "cell.ml", c("veg.ml", "spore.ml"))%>%
+   group_by(phage,pop, day, time)%>%
+   summarise(sd=sd(cell.ml),cell.ml=mean(cell.ml) ) ->
+d.sum
+
+d.sum
+   
+```
+
+```{r}
+d.sum$lower <- d.sum$cell.ml-d.sum$sd
+d.sum$upper <- d.sum$cell.ml+d.sum$sd
+
+d.sum%>%
+   ggplot(aes(x=day, y=cell.ml,color=phage))+
+      geom_line()+
+      geom_pointrange(aes(ymin=lower, ymax=upper), shape=21, fill="white")+
+      scale_y_log10()+
+      facet_grid(time~pop)+
+   scale_x_continuous(breaks = c(1,2))+
+   theme_cowplot()
+```
+
